@@ -1,179 +1,40 @@
-import { auth, db } from './firebase.js';
-import {
-  collection,
-  addDoc,
-  onSnapshot,
-  query,
-  orderBy,
-  updateDoc,
-  doc,
-  deleteDoc,
-} from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js';
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  onAuthStateChanged,
-  signOut,
-} from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
-// -------------------------
-//  LOGIN / REGISTER
-// -------------------------
-document.getElementById('logoutBtn').onclick = async () => {
-  await signOut(auth);
-  location.reload();
-};
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="styles.css">
+    
+    
 
-document.getElementById('loginBtn').onclick = async () => {
-  try {
-    await signInWithEmailAndPassword(auth, email.value, password.value);
-  } catch (err) {
-    if (err.code === 'auth/user-not-found') {
-      alert('Няма такъв потребител');
-    } else if (err.code === 'auth/wrong-password') {
-      alert('Грешна парола');
-    } else {
-      alert('Грешка при вход');
-    }
-  }
-};
-document.getElementById('registerBtn').onclick = async () => {
-  try {
-    await createUserWithEmailAndPassword(auth, email.value, password.value);
-  } catch (err) {
-    if (err.code === 'auth/email-already-in-use') {
-      alert('Този email вече е регистриран');
-    } else {
-      alert('Грешка при регистрация');
-    }
-  }
-};
-const email = document.getElementById('email');
-const password = document.getElementById('password');
+    
+  </head>
 
-loginBtn.onclick = async () => {
-  try {
-    await signInWithEmailAndPassword(auth, email.value, password.value);
-  } catch {
-    await createUserWithEmailAndPassword(auth, email.value, password.value);
-  }
-};
+  <body>
+    
 
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    document.getElementById('auth-section').style.display = 'none';
-    document.getElementById('todo-section').style.display = 'block';
-    loadTodos();
-  }
-});
+    <div id="auth-section" class="card">
+      <input id="email" type="email" placeholder="Email" />
+      <input id="password" type="password" placeholder="Парола" />
+      <button id="loginBtn">Вход</button>
+      <button id="registerBtn">Регистрация</button>
+    </div>
 
-// -------------------------
-//  ADD TODO
-// -------------------------
-document.getElementById('addTodoBtn').onclick = async () => {
-  const text = document.getElementById('newTodo').value.trim();
-  if (!text) return;
+    <div id="todo-section" style="display: none">
+      <button id="logoutBtn" style="background: #dc3545; margin-bottom: 20px">
+        Изход
+      </button>
 
-  await addDoc(collection(db, 'todos'), {
-    text,
-    user: auth.currentUser.email,
-    created: Date.now(),
-    done: false,
-  });
+      <div class="card">
+        <textarea id="newTodo" placeholder="Напиши нова задача..."></textarea>
+        <button id="addTodoBtn">Добави</button>
+      </div>
 
-  document.getElementById('newTodo').value = '';
-};
+      <h3>Всички задачи</h3>
+      <div id="todo-list"></div>
+    </div>
 
-// -------------------------
-//  LOAD TODOS + COMMENTS
-// -------------------------
-function loadTodos() {
-  const list = document.getElementById('todo-list');
-  const q = query(collection(db, 'todos'), orderBy('created', 'desc'));
-
-  onSnapshot(q, (snapshot) => {
-    list.innerHTML = '';
-    let counter = 1;
-
-    snapshot.forEach((docSnap) => {
-      const todo = docSnap.data();
-      const card = document.createElement('div');
-      card.className = 'card';
-
-      // зелено за незавършени, сиво за завършени
-      if (!todo.done) {
-        card.classList.add('todo-undone');
-      } else {
-        card.classList.add('todo-done');
-      }
-
-      card.innerHTML = ` <div style="display:flex; align-items:center; gap:10px; justify-content:space-between;"> <div style="display:flex; align-items:center; gap:10px;"> <span style="font-weight:bold; width:25px;">${counter}.</span> <input type="checkbox" ${
-        todo.done ? 'checked' : ''
-      } onchange="toggleDone('${
-        docSnap.id
-      }', this.checked)"> <span style="text-decoration:${
-        todo.done ? 'line-through' : 'none'
-      };"> ${
-        todo.text
-      } </span> </div> <button class="deleteBtn" onclick="deleteTodo('${
-        docSnap.id
-      }')">✖</button> </div> <div id="comments-${
-        docSnap.id
-      }"></div> <textarea id="commentInput-${
-        docSnap.id
-      }" placeholder="Коментар..."></textarea> <button onclick="addComment('${
-        docSnap.id
-      }')">Публикувай</button> `;
-
-      list.appendChild(card);
-      loadComments(docSnap.id);
-      counter++;
-    });
-  });
-}
-
-// -------------------------
-//  LOAD COMMENTS
-// -------------------------
-function loadComments(todoId) {
-  const commentsRef = collection(db, `todos/${todoId}/comments`);
-  const commentsDiv = document.getElementById(`comments-${todoId}`);
-
-  onSnapshot(commentsRef, (snapshot) => {
-    commentsDiv.innerHTML = '';
-    snapshot.forEach((docSnap) => {
-      const c = docSnap.data();
-      commentsDiv.innerHTML += `
-        <div class="comment"><b>${c.user}:</b> ${c.text}</div>
-      `;
-    });
-  });
-}
-
-// -------------------------
-//  ADD COMMENT
-// -------------------------
-window.addComment = async (todoId) => {
-  const input = document.getElementById(`commentInput-${todoId}`);
-  const text = input.value.trim();
-  if (!text) return;
-
-  await addDoc(collection(db, `todos/${todoId}/comments`), {
-    text,
-    user: auth.currentUser.email,
-    created: Date.now(),
-  });
-
-  input.value = '';
-};
-
-// -------------------------
-//  TOGGLE DONE
-// -------------------------
-window.toggleDone = async (id, value) => {
-  await updateDoc(doc(db, 'todos', id), { done: value });
-};
-
-window.deleteTodo = async (id) => {
-  if (!confirm('Сигурен ли си, че искаш да изтриеш задачата?')) return;
-  await deleteDoc(doc(db, 'todos', id));
-};
+    <script type="module" src="app.js"></script>
+    
+  </body>
+</html>
