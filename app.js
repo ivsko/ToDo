@@ -1,40 +1,126 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="styles.css">
-    
-    
+import { auth, db } from './firebase.js';
+import {
+  collection,
+  addDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  updateDoc,
+  doc,
+  deleteDoc,
+} from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut,
+} from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
 
-    
-  </head>
+document.getElementById('logoutBtn').onclick = async () => {
+  await signOut(auth);
+  location.reload();
+};
 
-  <body>
-    
+document.getElementById('loginBtn').onclick = async () => {
+  try {
+    await signInWithEmailAndPassword(auth, email.value, password.value);
+  } catch (err) {
+    if (err.code === 'auth/user-not-found') {
+      alert('Няма такъв потребител');
+    } else if (err.code === 'auth/wrong-password') {
+      alert('Грешна парола');
+    } else {
+      alert('Грешка при вход');
+    }
+  }
+};
 
-    <div id="auth-section" class="card">
-      <input id="email" type="email" placeholder="Email" />
-      <input id="password" type="password" placeholder="Парола" />
-      <button id="loginBtn">Вход</button>
-      <button id="registerBtn">Регистрация</button>
-    </div>
+document.getElementById('registerBtn').onclick = async () => {
+  try {
+    await createUserWithEmailAndPassword(auth, email.value, password.value);
+  } catch (err) {
+    if (err.code === 'auth/email-already-in-use') {
+      alert('Този email вече е регистриран');
+    } else {
+      alert('Грешка при регистрация');
+    }
+  }
+};
 
-    <div id="todo-section" style="display: none">
-      <button id="logoutBtn" style="background: #dc3545; margin-bottom: 20px">
-        Изход
-      </button>
+const email = document.getElementById('email');
+const password = document.getElementById('password');
 
-      <div class="card">
-        <textarea id="newTodo" placeholder="Напиши нова задача..."></textarea>
-        <button id="addTodoBtn">Добави</button>
-      </div>
+loginBtn.onclick = async () => {
+  try {
+    await signInWithEmailAndPassword(auth, email.value, password.value);
+  } catch {
+    await createUserWithEmailAndPassword(auth, email.value, password.value);
+  }
+};
 
-      <h3>Всички задачи</h3>
-      <div id="todo-list"></div>
-    </div>
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    document.getElementById('auth-section').style.display = 'none';
+    document.getElementById('todo-section').style.display = 'block';
+    loadTodos();
+  }
+});
 
-    <script type="module" src="app.js"></script>
-    
-  </body>
-</html>
+document.getElementById('addTodoBtn').onclick = async () => {
+  const text = document.getElementById('newTodo').value.trim();
+  if (!text) return;
+
+  await addDoc(collection(db, 'todos'), {
+    text,
+    user: auth.currentUser.email,
+    created: Date.now(),
+    done: false,
+  });
+
+  document.getElementById('newTodo').value = '';
+};
+
+function loadTodos() {
+  const list = document.getElementById('todo-list');
+  const q = query(collection(db, 'todos'), orderBy('created', 'desc'));
+
+  onSnapshot(q, (snapshot) => {
+    list.innerHTML = '';
+    let counter = 1;
+
+    snapshot.forEach((docSnap) => {
+      const todo = docSnap.data();
+      const card = document.createElement('div');
+      card.className = 'card';
+
+      if (!todo.done) {
+        card.classList.add('todo-undone');
+      } else {
+        card.classList.add('todo-done');
+      }
+
+      card.innerHTML = `
+        <div style="display:flex; align-items:center; gap:10px; justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-weight:bold; width:25px;">${counter}.</span>
+            <input type="checkbox" ${todo.done ? 'checked' : ''} onchange="toggleDone('${docSnap.id}', this.checked)">
+            <span style="text-decoration:${todo.done ? 'line-through' : 'none'};">${todo.text}</span>
+          </div>
+          <button class="deleteBtn" onclick="deleteTodo('${docSnap.id}')">✖</button>
+        </div>
+      `;
+
+      list.appendChild(card);
+      counter++;
+    });
+  });
+}
+
+window.toggleDone = async (id, value) => {
+  await updateDoc(doc(db, 'todos', id), { done: value });
+};
+
+window.deleteTodo = async (id) => {
+  if (!confirm('Сигурен ли си, че искаш да изтриеш задачата?')) return;
+  await deleteDoc(doc(db, 'todos', id));
+};
