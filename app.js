@@ -1,4 +1,5 @@
 import { auth, db } from './firebase.js';
+
 import {
   collection,
   addDoc,
@@ -8,6 +9,7 @@ import {
   updateDoc,
   doc,
   deleteDoc,
+  where,
 } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js';
 import {
   signInWithEmailAndPassword,
@@ -57,15 +59,25 @@ document.getElementById('addTodoBtn').onclick = async () => {
   if (!text) return;
   await addDoc(collection(db, 'todos'), {
     text,
-    user: auth.currentUser.email,
+    createdBy: auth.currentUser.uid,
+    createdByEmail: auth.currentUser.email,
     created: Date.now(),
     done: false,
   });
   document.getElementById('newTodo').value = '';
 };
 function loadTodos() {
+  const user = auth.currentUser; // <-- използва auth от firebase.js
+  if (!user) {
+    console.log('Няма логнат потребител');
+    return;
+  }
   const list = document.getElementById('todo-list');
-  const q = query(collection(db, 'todos'), orderBy('created', 'desc'));
+  const q = query(
+    collection(db, 'todos'),
+    where('createdBy', '==', user.uid),
+    orderBy('created', 'desc')
+  );
   onSnapshot(q, (snapshot) => {
     list.innerHTML = '';
     let counter = 1;
@@ -78,13 +90,13 @@ function loadTodos() {
       } else {
         card.classList.add('todo-done');
       }
-      card.innerHTML = ` <div style="display:flex; align-items:center; gap:10px; justify-content:space-between;"> <div style="display:flex; align-items:center; gap:10px; flex:1;"> <span style="font-weight:bold; width:25px;">${counter}.</span> <input type="checkbox" ${
+      card.innerHTML = ` <div style="display:flex; flex-direction:column; gap:5px;"> <div style="display:flex; align-items:center; gap:10px; justify-content:space-between;"> <div style="display:flex; align-items:center; gap:10px; flex:1;"> <span style="font-weight:bold; width:25px;">${counter}.</span> <input type="checkbox" ${
         todo.done ? 'checked' : ''
       } onchange="toggleDone('${
         docSnap.id
-      }', this.checked)"> <span style=" text-decoration:${
+      }', this.checked)"> <span style="text-decoration:${
         todo.done ? 'line-through' : 'none'
-      }; flex:1; display:block; word-break:break-word; "> ${
+      }; flex:1;"> ${
         todo.text
       } </span> </div> <button class="editBtn" onclick="editTodo('${
         docSnap.id
@@ -93,8 +105,9 @@ function loadTodos() {
         "\\'"
       )}')">✎</button> <button class="deleteBtn" onclick="deleteTodo('${
         docSnap.id
-      }')">✖</button> </div> `;
-
+      }')">✖</button> </div> <span style="font-size:12px; color:#666;">Създадено от: ${
+        todo.createdByEmail
+      }</span> </div> `;
       list.appendChild(card);
       counter++;
     });
