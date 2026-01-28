@@ -3,31 +3,23 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-}
-
-/* Dark theme */
+} /* Dark theme */
 body {
   background: #0e0f0f;
   color: #e6ffe6;
   font-family: system-ui, sans-serif;
   padding: 20px;
-}
-
-/* Container */
+} /* Container */
 main {
   max-width: 600px;
   margin: auto;
-}
-
-/* Headings */
+} /* Headings */
 h1 {
   font-size: 1.8rem;
   margin-bottom: 1rem;
   text-align: center;
   color: #b8ffb8;
-}
-
-/* Todo card */
+} /* Todo card */
 .card {
   background: #1a221a;
   border: 1px solid #2f4f2f;
@@ -36,70 +28,66 @@ h1 {
   border-radius: 10px;
   transition: 0.2s;
 }
-
 .card:hover {
   background: #1f2a1f;
-}
-
-/* Inputs */
+} /* Inputs */
 input,
-textarea {
-  background: #121a12;
-  color: #d8ffd8;
-  border: 1px solid #2f4f2f;
-  padding: 8px;
-  border-radius: 6px;
-  width: 100%;
-  margin-top: 8px;
-}
 
-/* Buttons */
 button {
   background: #2f5f2f;
   color: #e0ffe0;
   border: none;
-  padding: 8px 14px;
+  padding: 10px 14px;
   border-radius: 6px;
   cursor: pointer;
-  margin-top: 8px;
   transition: 0.2s;
+  font-size: 1rem;
 }
-
 button:hover {
   background: #3f7f3f;
-}
-
-/* Delete button */
+} /* Delete button */
 .deleteBtn {
   background: #7f1f1f;
   color: white;
-  border: none;
-  padding: 5px 10px;
+  padding: 6px 10px;
   border-radius: 6px;
-  cursor: pointer;
-  transition: 0.2s;
 }
-
 .deleteBtn:hover {
   background: #a82222;
-}
-
-/* Todo states */
+} /* Todo states */
 .todo-undone {
   background: #1f3a1f !important;
 }
-
 .todo-done {
   background: #2a2a2a !important;
   color: #bbbbbb;
   text-decoration: line-through;
-}
-
-/* Comments */
+} /* Comments */
 .comment {
   background: #162016;
   padding: 6px 10px;
   border-radius: 6px;
   margin-top: 6px;
   border-left: 3px solid #3f7f3f;
+} /* FIX: премахва стъпаловидното подреждане */
+#todo-list .card > div {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
 }
+#todo-list input[type='checkbox'] {
+  margin-left: 0 !important;
+} /* Подравняване на реда със задачата */
+#todo-list .card > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+#todo-list .card > div:first-child > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.todo-text { flex: 1; display: block; word-break: break-word; }
+
+.todo-text { flex: 1; display: block; white-space: pre-wrap; /* най-важното */ word-break: break-word; }
