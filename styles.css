@@ -32,7 +32,6 @@ h1 {
   background: #1f2a1f;
 } /* Inputs */
 input,
-
 button {
   background: #2f5f2f;
   color: #e0ffe0;
@@ -70,24 +69,50 @@ button:hover {
   margin-top: 6px;
   border-left: 3px solid #3f7f3f;
 } /* FIX: премахва стъпаловидното подреждане */
-#todo-list .card > div {
-  margin-left: 0 !important;
-  padding-left: 0 !important;
+
+.todo-text {
+  flex: 1;
+  display: block;
+  word-break: break-word;
 }
-#todo-list input[type='checkbox'] {
-  margin-left: 0 !important;
-} /* Подравняване на реда със задачата */
-#todo-list .card > div:first-child {
+
+.todo-text {
+  flex: 1;
+  display: block;
+  white-space: pre-wrap; /* най-важното */
+  word-break: break-word;
+}
+.card {
+  /* каквото си имаш вече, остави го */
+} /* редът със задачата */
+.todo-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-}
-#todo-list .card > div:first-child > div {
+} /* лявата част – номер, чекбокс, текст */
+.todo-left {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex: 1;
+} /* номерът */
+.todo-index {
+  font-weight: bold;
+  width: 25px;
+} /* текстът да заема останалото място */
+.todo-text {
+  flex: 1;
+  word-break: break-word;
+} /* дясната част – бутоните */
+.todo-right {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+} /* редът с потребителя отдолу, вляво */
+.todo-meta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #666;
+  text-align: left;
 }
-.todo-text { flex: 1; display: block; word-break: break-word; }
-
-.todo-text { flex: 1; display: block; white-space: pre-wrap; /* най-важното */ word-break: break-word; }
