@@ -75,7 +75,7 @@ function loadTodos() {
   const list = document.getElementById('todo-list');
   const q = query(
     collection(db, 'todos'),
-    where('createdBy', '==', user.uid),
+   
     orderBy('created', 'desc')
   );
   onSnapshot(q, (snapshot) => {
