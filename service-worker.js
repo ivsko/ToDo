@@ -11,6 +11,8 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
+messaging.onBackgroundMessage((payload) => { self.registration.showNotification(payload.notification.title, { body: payload.notification.body, icon: "./icons/icon-192.png" }); });
+
 const CACHE_NAME = 'todo-cache-v1';
 const urlsToCache = [
   './',
