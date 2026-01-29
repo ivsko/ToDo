@@ -1,4 +1,5 @@
-import { auth, db } from './firebase.js';
+import { auth, db, messaging } from './firebase.js';
+import { getToken } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-messaging.js';
 
 import {
   collection,
@@ -75,7 +76,7 @@ function loadTodos() {
   const list = document.getElementById('todo-list');
   const q = query(
     collection(db, 'todos'),
-   
+    where('createdBy', '==', user.uid),
     orderBy('created', 'desc')
   );
   onSnapshot(q, (snapshot) => {
@@ -126,26 +127,21 @@ window.editTodo = async (id, oldText) => {
   if (!newText || newText.trim() === '') return;
   await updateDoc(doc(db, 'todos', id), { text: newText.trim() });
 };
-import { messaging } from "./firebase.js";
-import { getToken } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-messaging.js";
 
-document.getElementById("notifyBtn").onclick = async () => {
+document.getElementById('notifyBtn').onclick = async () => {
   try {
     const token = await getToken(messaging, {
-      vapidKey: "BO4LLlmZj9NT6Ze89zXDPZVZmemDMGczIX4qUyHpIFKS8HzNzkr0LwKjIUGiQJTgD9LbC32P22BMYfbs3ebau0w"
+      vapidKey:
+        'BO4LLlmZj9NT6Ze89zXDPZVZmemDMGczIX4qUyHpIFKS8HzNzkr0LwKjIUGiQJTgD9LbC32P22BMYfbs3ebau0w',
     });
-
     if (!token) {
-      alert("Потребителят отказа известия");
+      alert('Потребителят отказа известия');
       return;
     }
-
-    console.log("FCM Token:", token);
-    alert("Известията са разрешени");
-
+    console.log('FCM Token:', token);
+    alert('Известията са разрешени');
   } catch (err) {
-    console.error("Грешка при разрешаване на известия:", err);
-    alert("Не успях да разреша известия");
+    console.error('Грешка при разрешаване на известия:', err);
+    alert('Не успях да разреша известия');
   }
 };
-
