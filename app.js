@@ -1,5 +1,4 @@
-import { auth, db, messaging } from './firebase.js';
-import { getToken } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-messaging.js';
+import { auth, db } from './firebase.js';
 
 import {
   collection,
@@ -28,7 +27,7 @@ let currentFamilyId = null;
 document.getElementById('loginBtn').onclick = async () => {
   try {
     await signInWithEmailAndPassword(auth, email.value, password.value);
-  } catch (err) {
+  } catch {
     alert('Грешка при вход');
   }
 };
@@ -44,7 +43,7 @@ document.getElementById('registerBtn').onclick = async () => {
       created: Date.now()
     });
 
-  } catch (err) {
+  } catch {
     alert('Грешка при регистрация');
   }
 };
@@ -61,7 +60,7 @@ onAuthStateChanged(auth, async (user) => {
 
   document.getElementById('auth-section').style.display = 'none';
   document.getElementById('todo-section').style.display = 'block';
-  document.getElementById('user-info').innerText = `${user.email}`;
+  document.getElementById('user-info').innerText = `Логнат като: ${user.email}`;
 
   const userRef = doc(db, 'users', user.uid);
   const userSnap = await getDoc(userRef);
@@ -76,26 +75,36 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 /* ---------------- FAMILY UI ---------------- */
-function updateFamilyUI() {
+async function updateFamilyUI() {
   const notJoined = document.getElementById("familyNotJoined");
   const joined = document.getElementById("familyJoined");
   const codeBox = document.getElementById("familyCode");
+  const nameBox = document.getElementById("familyName");
 
   if (!currentFamilyId) {
     notJoined.style.display = "block";
     joined.style.display = "none";
-  } else {
-    notJoined.style.display = "none";
-    joined.style.display = "block";
-    codeBox.innerText = currentFamilyId;
+    return;
   }
+
+  const famSnap = await getDoc(doc(db, "families", currentFamilyId));
+
+  notJoined.style.display = "none";
+  joined.style.display = "block";
+
+  codeBox.innerText = currentFamilyId;
+  nameBox.innerText = famSnap.exists() ? famSnap.data().name : "Без име";
 }
 
 /* ---------------- CREATE FAMILY ---------------- */
 document.getElementById('createFamilyBtn').onclick = async () => {
+  const name = document.getElementById('familyNameInput').value.trim();
+  if (!name) return alert("Въведи име на семейството");
+
   const familyId = 'FAM-' + Math.random().toString(36).substring(2, 8).toUpperCase();
 
   await setDoc(doc(db, 'families', familyId), {
+    name,
     createdBy: auth.currentUser.uid,
     created: Date.now()
   });
@@ -105,6 +114,7 @@ document.getElementById('createFamilyBtn').onclick = async () => {
   });
 
   currentFamilyId = familyId;
+
   updateFamilyUI();
   loadTodos();
 
@@ -124,6 +134,7 @@ document.getElementById('joinFamilyBtn').onclick = async () => {
   });
 
   currentFamilyId = code;
+
   updateFamilyUI();
   loadTodos();
 
