@@ -145,3 +145,38 @@ select option {
   color: #666;
   text-align: left;
 }
+/* Удобни dropdown-и за мобилно приложение – тъмна тема */
+select {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 18px;
+  border-radius: 12px;
+  border: 2px solid #3f7f3f;
+  background: #1a221a;
+  color: #e6ffe6;
+  margin-top: 10px;
+  margin-bottom: 10px;
+
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  background-image: url("data:image/svg+xml;utf8,<svg fill='lightgreen' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 22px;
+}
+
+/* По-големи опции вътре */
+select option {
+  padding: 14px;
+  font-size: 18px;
+  background: #1a221a;
+  color: #e6ffe6;
+}
+
+/* При фокус – по-ясна рамка */
+select:focus {
+  border-color: #5cff5c;
+  outline: none;
+}
