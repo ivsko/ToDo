@@ -74,6 +74,8 @@ onAuthStateChanged(auth, async (user) => {
   if (currentFamilyId) loadTodos();
 });
 
+document.getElementById('filterCategory').onchange = () => { if (currentFamilyId) loadTodos(); };
+
 /* ---------------- FAMILY UI ---------------- */
 async function updateFamilyUI() {
   const notJoined = document.getElementById("familyNotJoined");
