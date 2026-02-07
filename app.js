@@ -61,7 +61,7 @@ onAuthStateChanged(auth, async (user) => {
 
   document.getElementById('auth-section').style.display = 'none';
   document.getElementById('todo-section').style.display = 'block';
-  document.getElementById('user-info').innerText = `Логнат като: ${user.email}`;
+  document.getElementById('user-info').innerText = `${user.email}`;
 
   const userRef = doc(db, 'users', user.uid);
   const userSnap = await getDoc(userRef);
