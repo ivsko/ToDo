@@ -61,7 +61,7 @@ onAuthStateChanged(auth, (user) => {
     document.getElementById('auth-section').style.display = 'none';
     document.getElementById('todo-section').style.display = 'block';
 
-    document.getElementById('user-info').innerText = `Логнат като: ${user.email}`;
+    document.getElementById('user-info').innerText = `${user.email}`;
 
     loadTodos();
   }
