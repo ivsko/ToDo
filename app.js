@@ -128,7 +128,7 @@ window.editTodo = async (id, oldText) => {
   await updateDoc(doc(db, 'todos', id), { text: newText.trim() });
 };
 
-import { setDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+import { setDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
 document.getElementById('notifyBtn').onclick = async () => {
   try {
