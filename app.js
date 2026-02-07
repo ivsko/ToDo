@@ -66,6 +66,7 @@ onAuthStateChanged(auth, (user) => {
     loadTodos();
   }
 });
+document.getElementById('filterCategory').onchange = loadTodos;
 
 
 // ADD TODO
