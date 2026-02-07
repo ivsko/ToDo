@@ -21,24 +21,7 @@
       <button id="logoutBtn" style="background: #dc3545; margin-bottom: 20px">
         Изход
       </button>
-<div class="card">
-  <h3>Семейна група</h3>
-
-  <!-- Създай семейство -->
-  <button id="createFamilyBtn">Създай семейство</button>
-
-  <!-- Показва се само след създаване -->
-  <div id="familyCodeBox" style="display:none; margin-top:10px;">
-    Твоят семеен код:
-    <b id="familyCode" style="font-size:20px; color:#5cff5c;"></b>
-  </div>
-
-  <hr style="margin:15px 0; border-color:#2f4f2f;">
-
-  <!-- Присъедини се към семейство -->
-  <input id="joinFamilyInput" type="text" placeholder="Въведи семеен код">
-  <button id="joinFamilyBtn">Присъедини се</button>
-</div>
+<div id="familySection" class="card"> <!-- Когато НЕ си в семейство --> <div id="familyNotJoined"> <h3>Семейна група</h3> <button id="createFamilyBtn">Създай семейство</button> <input id="joinFamilyInput" type="text" placeholder="Въведи семеен код"> <button id="joinFamilyBtn">Присъедини се</button> </div> <!-- Когато СИ в семейство --> <div id="familyJoined" style="display:none;"> <h3>Твоето семейство</h3> <p>Семеен код: <b id="familyCode"></b></p> </div> </div>
 
       
 
@@ -78,5 +61,6 @@
     <script type="module" src="app.js"></script>
   </body>
 </html>
+
 
 
