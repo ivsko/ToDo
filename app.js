@@ -66,6 +66,7 @@ onAuthStateChanged(auth, (user) => {
     loadTodos();
   }
 });
+
 document.getElementById('filterCategory').onchange = loadTodos;
 
 
@@ -89,7 +90,7 @@ document.getElementById('addTodoBtn').onclick = async () => {
 };
 
 
-// LOAD TODOS (with filter)
+// LOAD TODOS (with filter + fallback)
 function loadTodos() {
   const list = document.getElementById('todo-list');
   const filter = document.getElementById('filterCategory').value;
@@ -111,7 +112,13 @@ function loadTodos() {
     let counter = 1;
 
     snapshot.forEach((docSnap) => {
-      const todo = docSnap.data();
+      const data = docSnap.data();
+
+      // Fallback категория за стари задачи
+      const todo = {
+        ...data,
+        category: data.category || "Ремонт"
+      };
 
       const card = document.createElement('div');
       card.className = 'card';
