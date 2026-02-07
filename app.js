@@ -24,12 +24,6 @@ import {
 
 let currentFamilyId = null;
 
-/* ---------------- LOGOUT ---------------- */
-document.getElementById('logoutBtn').onclick = async () => {
-  await signOut(auth);
-  location.reload();
-};
-
 /* ---------------- LOGIN ---------------- */
 document.getElementById('loginBtn').onclick = async () => {
   try {
@@ -53,6 +47,12 @@ document.getElementById('registerBtn').onclick = async () => {
   } catch (err) {
     alert('Грешка при регистрация');
   }
+};
+
+/* ---------------- LOGOUT ---------------- */
+document.getElementById('logoutBtn').onclick = async () => {
+  await signOut(auth);
+  location.reload();
 };
 
 /* ---------------- AUTH STATE ---------------- */
@@ -231,24 +231,3 @@ window.editTodo = async (id, oldText) => {
   if (!newText) return;
   await updateDoc(doc(db, 'todos', id), { text: newText });
 };
-
-/* ---------------- NOTIFICATIONS (ако го ползваш) ---------------- */
-const notifyBtn = document.getElementById('notifyBtn');
-if (notifyBtn) {
-  notifyBtn.onclick = async () => {
-    try {
-      const token = await getToken(messaging, {
-        vapidKey: 'BO4LLlmZj9NT6Ze89zXDPZVZmemDMGczIX4qUyHpIFKS8HzNzkr0LwKjIUGiQJTgD9LbC32P22BMYfbs3ebau0w',
-      });
-
-      await setDoc(doc(db, 'fcmTokens', auth.currentUser.uid), {
-        token,
-        email: auth.currentUser.email
-      });
-
-      alert("Известията са разрешени");
-    } catch (err) {
-      console.error(err);
-    }
-  };
-}
