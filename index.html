@@ -4,17 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="styles.css">
-    <script> navigator.serviceWorker.register('/firebase-messaging-sw.js'); </script>
-    
-    
 
-    
+    <!-- Service Worker -->
+    <script>
+      navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    </script>
   </head>
 
   <body>
-  <div id="user-info" style="margin-bottom: 10px; font-weight: bold;"></div>
-  
 
+    <div id="user-info" style="margin-bottom: 10px; font-weight: bold;"></div>
+
+    <!-- LOGIN / REGISTER -->
     <div id="auth-section" class="card">
       <input id="email" type="email" placeholder="Email" />
       <input id="password" type="password" placeholder="Парола" />
@@ -22,26 +23,44 @@
       <button id="registerBtn">Регистрация</button>
     </div>
 
+    <!-- TODO SECTION -->
     <div id="todo-section" style="display: none">
       <button id="logoutBtn" style="background: #dc3545; margin-bottom: 20px">
         Изход
       </button>
-      <button id="notifyBtn">Разреши известия</button>
 
+      <button id="notifyBtn">Разреши известия</button>
 
       <div class="card">
         <textarea id="newTodo" placeholder="Напиши нова задача..."></textarea>
+
+        <!-- CATEGORY SELECT -->
+        <select id="category">
+          <option value="Хранителни стоки">Хранителни стоки</option>
+          <option value="Здраве">Здраве</option>
+          <option value="Дом">Дом</option>
+          <option value="Работа">Работа</option>
+          <option value="Друго">Друго</option>
+        </select>
+
         <button id="addTodoBtn">Добави</button>
       </div>
+
+      <!-- FILTER -->
+      <h3>Филтър по категория</h3>
+      <select id="filterCategory">
+        <option value="all">Всички</option>
+        <option value="Хранителни стоки">Хранителни стоки</option>
+        <option value="Здраве">Здраве</option>
+        <option value="Дом">Дом</option>
+        <option value="Работа">Работа</option>
+        <option value="Друго">Друго</option>
+      </select>
 
       <h3>Всички задачи</h3>
       <div id="todo-list"></div>
     </div>
 
     <script type="module" src="app.js"></script>
-    
   </body>
 </html>
-
-
-
