@@ -1,19 +1,8 @@
-importScripts('https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/9.22.2/firebase-messaging-compat.js');
-
-firebase.initializeApp({
-  apiKey: "…",
-  authDomain: "…",
-  projectId: "…",
-  messagingSenderId: "…",
-  appId: "…"
+// Minimal SW to avoid installation errors
+self.addEventListener('install', () => {
+  console.log("Service Worker installed");
 });
 
-const messaging = firebase.messaging();
-
-messaging.onBackgroundMessage((payload) => {
-  self.registration.showNotification(payload.notification.title, {
-    body: payload.notification.body,
-    icon: "/icon.png"
-  });
+self.addEventListener('activate', () => {
+  console.log("Service Worker activated");
 });
