@@ -10,6 +10,7 @@
   <body>
     <div id="user-info" style="margin-bottom: 10px; font-weight: bold;"></div>
 
+    <!-- LOGIN / REGISTER -->
     <div id="auth-section" class="card">
       <input id="email" type="email" placeholder="Email" />
       <input id="password" type="password" placeholder="Парола" />
@@ -17,18 +18,40 @@
       <button id="registerBtn">Регистрация</button>
     </div>
 
+    <!-- MAIN APP -->
     <div id="todo-section" style="display: none">
       <button id="logoutBtn" style="background: #dc3545; margin-bottom: 20px">
         Изход
       </button>
-<div id="familySection" class="card"> <!-- Когато НЕ си в семейство --> <div id="familyNotJoined"> <h3>Семейна група</h3> <button id="createFamilyBtn">Създай семейство</button> <input id="joinFamilyInput" type="text" placeholder="Въведи семеен код"> <button id="joinFamilyBtn">Присъедини се</button> </div> <!-- Когато СИ в семейство --> <div id="familyJoined" style="display:none;"> <h3>Твоето семейство</h3> <p>Семеен код: <b id="familyCode"></b></p> </div> </div>
 
-      
+      <!-- FAMILY SECTION -->
+      <div id="familySection" class="card">
 
+        <!-- NOT JOINED -->
+        <div id="familyNotJoined">
+          <h3>Семейна група</h3>
+
+          <input id="familyNameInput" type="text" placeholder="Име на семейството">
+
+          <button id="createFamilyBtn">Създай семейство</button>
+
+          <input id="joinFamilyInput" type="text" placeholder="Въведи семеен код">
+          <button id="joinFamilyBtn">Присъедини се</button>
+        </div>
+
+        <!-- JOINED -->
+        <div id="familyJoined" style="display:none;">
+          <h3>Твоето семейство</h3>
+          <p>Име: <b id="familyName"></b></p>
+          <p>Семеен код: <b id="familyCode"></b></p>
+        </div>
+
+      </div>
+
+      <!-- ADD TODO -->
       <div class="card">
         <textarea id="newTodo" placeholder="Напиши нова задача..."></textarea>
 
-        <!-- Оригиналният dropdown за категория -->
         <select id="category">
           <option value="Хранителни стоки">Хранителни стоки</option>
           <option value="Здраве">Здраве</option>
@@ -41,9 +64,8 @@
         <button id="addTodoBtn">Добави</button>
       </div>
 
+      <!-- FILTER -->
       <h3>Филтър по категория</h3>
-
-      <!-- Оригиналният dropdown за филтър -->
       <select id="filterCategory">
         <option value="all">Всички</option>
         <option value="Хранителни стоки">Хранителни стоки</option>
@@ -54,6 +76,7 @@
         <option value="Друго">Друго</option>
       </select>
 
+      <!-- TODO LIST -->
       <h3>Всички задачи</h3>
       <div id="todo-list"></div>
     </div>
@@ -61,6 +84,3 @@
     <script type="module" src="app.js"></script>
   </body>
 </html>
-
-
-
