@@ -112,6 +112,35 @@ button:hover {
 } /* редът с потребителя отдолу, вляво */
 .todo-meta {
   margin-top: 4px;
+  /* По-големи и удобни dropdown-и за мобилни устройства */
+select {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 18px;
+  border-radius: 12px;
+  border: 2px solid #ccc;
+  background: #f9f9f9;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+/* Икона за dropdown (стрелка) */
+select {
+  background-image: url("data:image/svg+xml;utf8,<svg fill='gray' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 20px;
+}
+
+/* По-големи опции вътре */
+select option {
+  padding: 12px;
+  font-size: 18px;
+}
+
   font-size: 12px;
   color: #666;
   text-align: left;
