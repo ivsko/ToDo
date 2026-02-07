@@ -3,17 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="styles.css" />
-
-    <script>
-      navigator.serviceWorker?.register('/firebase-messaging-sw.js');
-    </script>
+    <link rel="stylesheet" href="styles.css">
+    <script> navigator.serviceWorker.register('/firebase-messaging-sw.js'); </script>
   </head>
 
   <body>
     <div id="user-info" style="margin-bottom: 10px; font-weight: bold;"></div>
 
-    <!-- AUTH SECTION -->
     <div id="auth-section" class="card">
       <input id="email" type="email" placeholder="Email" />
       <input id="password" type="password" placeholder="Парола" />
@@ -21,44 +17,42 @@
       <button id="registerBtn">Регистрация</button>
     </div>
 
-    <!-- TODO SECTION -->
     <div id="todo-section" style="display: none">
       <button id="logoutBtn" style="background: #dc3545; margin-bottom: 20px">
         Изход
       </button>
 
-      <!-- ADD TODO -->
+      <!-- Ако искаш да махнеш бутона за известия, просто изтрий този ред -->
+      <button id="notifyBtn">Разреши известия</button>
+
       <div class="card">
         <textarea id="newTodo" placeholder="Напиши нова задача..."></textarea>
 
-        <!-- CATEGORY SELECTOR FOR ADDING -->
-        <div id="addCategoryBar" class="category-scroll">
-          <button data-cat="Хранителни стоки" class="cat-btn active">
-            🛒 Хранителни
-          </button>
-          <button data-cat="Здраве" class="cat-btn">🏥 Здраве</button>
-          <button data-cat="Дом" class="cat-btn">🏠 Дом</button>
-          <button data-cat="Ремонт" class="cat-btn">🛠️ Ремонт</button>
-          <button data-cat="Работа" class="cat-btn">💼 Работа</button>
-          <button data-cat="Друго" class="cat-btn">📦 Друго</button>
-        </div>
+        <!-- Оригиналният dropdown за категория -->
+        <select id="category">
+          <option value="Хранителни стоки">Хранителни стоки</option>
+          <option value="Здраве">Здраве</option>
+          <option value="Дом">Дом</option>
+          <option value="Ремонт">Ремонт</option>
+          <option value="Работа">Работа</option>
+          <option value="Друго">Друго</option>
+        </select>
 
         <button id="addTodoBtn">Добави</button>
       </div>
 
-      <!-- FILTER BAR -->
       <h3>Филтър по категория</h3>
-      <div id="filterBar" class="category-scroll">
-        <button data-cat="all" class="cat-btn active">Всички</button>
-        <button data-cat="Хранителни стоки" class="cat-btn">
-          🛒 Хранителни
-        </button>
-        <button data-cat="Здраве" class="cat-btn">🏥 Здраве</button>
-        <button data-cat="Дом" class="cat-btn">🏠 Дом</button>
-        <button data-cat="Ремонт" class="cat-btn">🛠️ Ремонт</button>
-        <button data-cat="Работа" class="cat-btn">💼 Работа</button>
-        <button data-cat="Друго" class="cat-btn">📦 Друго</button>
-      </div>
+
+      <!-- Оригиналният dropdown за филтър -->
+      <select id="filterCategory">
+        <option value="all">Всички</option>
+        <option value="Хранителни стоки">Хранителни стоки</option>
+        <option value="Здраве">Здраве</option>
+        <option value="Дом">Дом</option>
+        <option value="Ремонт">Ремонт</option>
+        <option value="Работа">Работа</option>
+        <option value="Друго">Друго</option>
+      </select>
 
       <h3>Всички задачи</h3>
       <div id="todo-list"></div>
