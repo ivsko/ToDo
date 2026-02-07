@@ -172,25 +172,3 @@ window.editTodo = async (id, oldText) => {
 };
 
 
-// NOTIFICATIONS
-document.getElementById('notifyBtn').onclick = async () => {
-  try {
-    const token = await getToken(messaging, {
-      vapidKey: 'BO4LLlmZj9NT6Ze89zXDPZVZmemDMGczIX4qUyHpIFKS8HzNzkr0LwKjIUGiQJTgD9LbC32P22BMYfbs3ebau0w',
-    });
-
-    if (!token) {
-      alert('Потребителят отказа известия');
-      return;
-    }
-
-    await setDoc(doc(db, "fcmTokens", auth.currentUser.uid), {
-      token,
-      email: auth.currentUser.email
-    });
-
-    alert('Известията са разрешени');
-  } catch (err) {
-    console.error(err);
-  }
-};
