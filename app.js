@@ -52,9 +52,15 @@ onAuthStateChanged(auth, (user) => {
   if (user) {
     document.getElementById('auth-section').style.display = 'none';
     document.getElementById('todo-section').style.display = 'block';
+
+    
+    document.getElementById('user-info').innerText =
+      `Логнат като: ${user.email}`;
+
     loadTodos();
   }
 });
+
 document.getElementById('addTodoBtn').onclick = async () => {
   const text = document.getElementById('newTodo').value.trim();
   if (!text) return;
