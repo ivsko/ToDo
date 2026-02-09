@@ -113,6 +113,7 @@ button:hover {
 .todo-meta {
   margin-top: 4px;
   /* По-големи и удобни dropdown-и за мобилни устройства */
+  .developer-tag { margin-top: 30px; text-align: center; font-size: 0.9rem; color: #8b949e; /* леко сиво */ opacity: 0.85; padding-top: 15px; border-top: 1px solid #30363d; } .developer-tag span { color:  #2ea043; /* неоново син акцент */ font-weight: 600; }
 select {
   width: 100%;
   padding: 14px 16px;
@@ -180,4 +181,4 @@ select:focus {
   border-color: #5cff5c;
   outline: none;
 }
-.developer-tag { margin-top: 30px; text-align: center; font-size: 0.9rem; color: #8b949e; /* леко сиво */ opacity: 0.85; padding-top: 15px; border-top: 1px solid #30363d; } .developer-tag span { color:  #2ea043; /* неоново син акцент */ font-weight: 600; }
+
