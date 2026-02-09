@@ -1,184 +1,247 @@
+/* RESET */
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-} /* Dark theme */
+}
+
+/* DARK THEME */
 body {
-  background: #0e0f0f;
-  color: #e6ffe6;
+  background: #0d1117;
+  color: #e6edf3;
   font-family: system-ui, sans-serif;
   padding: 20px;
-} /* Container */
+}
+
+/* CONTAINER */
 main {
   max-width: 480px;
   width: 100%;
   margin: 0 auto;
   padding: 10px;
-} /* Headings */
+}
+#logoutBtn {
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  border-radius: 6px;
+}
+
+/* HEADINGS */
 h1 {
   font-size: 1.8rem;
   margin-bottom: 1rem;
   text-align: center;
-  color: #b8ffb8;
-} /* Todo card */
-.card {
-  background: #1a221a;
-  border: 1px solid #2f4f2f;
-  padding: 15px;
-  margin-bottom: 12px;
-  border-radius: 10px;
-  transition: 0.2s;
+  color: #77ad81;
 }
-.card:hover {
-  background: #1f2a1f;
-} /* Inputs */
-input,
+
+/* INPUT FIELD – centered */
+#newTodo {
+  width: 100%;
+  display: block;
+  margin: 0 auto 12px auto;
+  padding: 14px;
+  border-radius: 10px;
+  background: #21262d;
+  border: 1px solid #30363d;
+  color: #e6edf3;
+  text-align: center;
+  font-size: 1.1rem;
+  transition: 0.25s;
+}
+
+#newTodo:focus {
+  border-color: #2ea043;
+  outline: none;
+}
+
+/* BUTTONS */
 button {
-  background: #2f5f2f;
-  color: #e0ffe0;
-  border: none;
+  background: #21262d;
+  color: #e6edf3;
+  border: 1px solid #30363d;
   padding: 10px 14px;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: 0.2s;
+  transition: 0.25s;
   font-size: 1rem;
 }
+#familyJoined {
+  text-align: center;
+}
+
+
 button:hover {
-  background: #3f7f3f;
-} /* Delete button */
+  background: #2ea043;
+  color: white;
+  transform: scale(1.03);
+}
+
+/* DELETE BUTTON */
 .deleteBtn {
-  background: #7f1f1f;
+  background: #8b0000;
   color: white;
   padding: 6px 10px;
   border-radius: 6px;
+  border: none;
 }
+
 .deleteBtn:hover {
-  background: #a82222;
-} /* Todo states */
-.todo-undone {
-  background: #1f3a1f !important;
-}
-.todo-done {
-  background: #2a2a2a !important;
-  color: #bbbbbb;
-  text-decoration: line-through;
-} /* Comments */
-.comment {
-  background: #162016;
-  padding: 6px 10px;
-  border-radius: 6px;
-  margin-top: 6px;
-  border-left: 3px solid #3f7f3f;
-} /* FIX: премахва стъпаловидното подреждане */
-
-.todo-text {
-  flex: 1;
-  display: block;
-  word-break: break-word;
+  background: #b30000;
+  transform: scale(1.05);
 }
 
-.todo-text {
-  flex: 1;
-  display: block;
-  white-space: pre-wrap; /* най-важното */
-  word-break: break-word;
-}
+/* TODO CARD */
 .card {
-  /* каквото си имаш вече, остави го */
-} /* редът със задачата */
+  background: #161b22;
+  border: 1px solid #30363d;
+  padding: 12px;
+  margin-bottom: 10px;
+  border-radius: 10px;
+  transition: 0.25s ease;
+  animation: fadeIn 0.35s ease;
+}
+
+.card:hover {
+  background: #1d242b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* ANIMATION */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* TODO STATES */
+.todo-undone {
+  background: #162e1d !important;
+  border-left: 4px solid #63776b !important;
+}
+
+.todo-done {
+  background: #1a1a1a !important;
+  border-left: 4px solid #555 !important;
+  color: #9ca3af !important;
+  text-decoration: line-through;
+}
+
+/* TODO ROW */
 .todo-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-} /* лявата част – номер, чекбокс, текст */
+  gap: 6px;
+}
+
+/* LEFT SIDE */
 .todo-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   flex: 1;
-} /* номерът */
+  min-width: 0;
+}
+
+/* INDEX */
 .todo-index {
   font-weight: bold;
-  width: 25px;
-} /* текстът да заема останалото място */
+  width: 22px;
+  color: #caddce;
+}
+
+/* TEXT */
 .todo-text {
   flex: 1;
+  display: block;
+  white-space: normal;
   word-break: break-word;
-} /* дясната част – бутоните */
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+  font-size: 0.95rem;
+}
+
+/* RIGHT SIDE BUTTONS */
 .todo-right {
   display: flex;
   align-items: center;
-  gap: 5px;
-} /* редът с потребителя отдолу, вляво */
-.todo-meta { margin-top: 4px; } /* Developer tag */ 
-.developer-tag { margin-top: 30px; text-align: center; font-size: 0.9rem; color: #8b949e; 
-opacity: 0.85; padding-top: 15px; border-top: 1px solid #30363d; } 
-.developer-tag span { color: #2ea043; font-weight: 600; }
+  gap: 6px;
+}
+
+/* EDIT BUTTON */
+.editBtn {
+  background: #30363d;
+  color: #e6edf3;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #3d444d;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.editBtn:hover {
+  background: #3d444d;
+  transform: scale(1.05);
+}
+
+/* META INFO */
+.todo-meta {
+  margin-top: 6px;
+  font-size: 0.8rem;
+  color: #8b949e;
+  opacity: 0.8;
+  padding-left: 28px;
+}
+
+/* SELECT DROPDOWN */
 select {
   width: 100%;
   padding: 14px 16px;
   font-size: 18px;
   border-radius: 12px;
-  border: 2px solid #ccc;
-  background: #f9f9f9;
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
+  border: 2px solid #30363d;
+  background: #161b22;
+  color: #e6edf3;
   margin-top: 10px;
   margin-bottom: 10px;
-}
-
-/* Икона за dropdown (стрелка) */
-select {
-  background-image: url("data:image/svg+xml;utf8,<svg fill='gray' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  background-size: 20px;
-}
-
-/* По-големи опции вътре */
-select option {
-  padding: 12px;
-  font-size: 18px;
-}
-
-  font-size: 12px;
-  color: #666;
-  text-align: left;
-}
-/* Удобни dropdown-и за мобилно приложение – тъмна тема */
-select {
-  width: 100%;
-  padding: 14px 16px;
-  font-size: 18px;
-  border-radius: 12px;
-  border: 2px solid #3f7f3f;
-  background: #1a221a;
-  color: #e6ffe6;
-  margin-top: 10px;
-  margin-bottom: 10px;
-
   appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-
   background-image: url("data:image/svg+xml;utf8,<svg fill='lightgreen' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
   background-repeat: no-repeat;
   background-position: right 12px center;
   background-size: 22px;
 }
 
-/* По-големи опции вътре */
 select option {
-  padding: 14px;
+  background: #161b22;
+  color: #e6edf3;
+  padding: 12px;
   font-size: 18px;
-  background: #1a221a;
-  color: #e6ffe6;
 }
 
-/* При фокус – по-ясна рамка */
 select:focus {
-  border-color: #5cff5c;
+  border-color: #2ea043;
   outline: none;
+}
+
+/* DEVELOPER TAG */
+.developer-tag {
+  margin-top: 30px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #8b949e;
+  opacity: 0.85;
+  padding-top: 15px;
+  border-top: 1px solid #30363d;
+}
+
+.developer-tag span {
+  color: #2ea043;
+  font-weight: 600;
 }
