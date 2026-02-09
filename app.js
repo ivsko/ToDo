@@ -60,7 +60,7 @@ onAuthStateChanged(auth, async (user) => {
 
   document.getElementById('auth-section').style.display = 'none';
   document.getElementById('todo-section').style.display = 'block';
-  document.getElementById('user-info').innerText = `Логнат като: ${user.email}`;
+  document.getElementById('user-info').innerText = `${user.email}`;
 
   const userRef = doc(db, 'users', user.uid);
   const userSnap = await getDoc(userRef);
@@ -202,9 +202,9 @@ function loadTodos() {
       card.innerHTML = `
         <div class="todo-row">
           <div class="todo-left">
-            <span class="todo-index">${counter}.</span>
+            <div class="todo-index">${counter}.</div>
             <input type="checkbox" ${data.done ? 'checked' : ''} onchange="toggleDone('${docSnap.id}', this.checked)">
-            <span class="todo-text">${data.text}</span>
+            <div class="todo-text">${data.text}</div>
           </div>
           <div class="todo-right">
             <button class="editBtn" onclick="editTodo('${docSnap.id}', '${data.text.replace(/'/g, "\\'")}')">✎</button>
@@ -212,8 +212,8 @@ function loadTodos() {
           </div>
         </div>
         <div class="todo-meta">
-          Категория: ${data.category}<br>
-          Създадено от: ${data.createdByEmail}
+           ${data.category}<br>
+          ${data.createdByEmail}
         </div>
       `;
 
