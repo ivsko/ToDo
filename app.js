@@ -199,6 +199,8 @@ function loadTodos() {
       card.className = 'card';
       card.classList.add(data.done ? 'todo-done' : 'todo-undone');
 
+      const date = new Date(data.created).toLocaleString("bg-BG");
+
       card.innerHTML = `
         <div class="todo-row">
           <div class="todo-left">
@@ -211,11 +213,14 @@ function loadTodos() {
             <button class="deleteBtn" onclick="deleteTodo('${docSnap.id}')">✖</button>
           </div>
         </div>
+      
         <div class="todo-meta">
-           ${data.category}<br>
+          ${data.category}<br>
+          ${date}<br>
           ${data.createdByEmail}
         </div>
       `;
+      
 
       list.appendChild(card);
       counter++;
