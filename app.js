@@ -137,7 +137,7 @@ function relTime(ms) {
 
 function nameOf(email, { me = 'Ти' } = {}) {
   if (!email) return 'Някой';
-  if (state.user && email === state.user.email) return me;
+  if (me !== null && state.user && email === state.user.email) return me;
   return email.split('@')[0]
     .split(/[._-]+/)
     .filter(Boolean)
@@ -240,7 +240,7 @@ async function setNotify(on) {
 }
 
 async function systemNotify(title, body, tag) {
-  if (!state.notify || document.visibilityState === 'visible') return;
+  if (!state.notify || state.push?.on || document.visibilityState === 'visible') return;
   try {
     const reg = await navigator.serviceWorker?.ready;
     if (reg) await reg.showNotification(title, { body, tag, icon: 'icons/icon-192.png', badge: 'icons/icon-192.png' });
@@ -356,7 +356,10 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   const snap = await getDoc(doc(db, 'users', user.uid));
-  await enterFamily(snap.exists() ? snap.data().familyId || null : null);
+  const profile = snap.exists() ? snap.data() : {};
+  state.push = { topic: profile.ntfyTopic || null, on: Boolean(profile.ntfyOn && profile.ntfyTopic) };
+  updatePushUI();
+  await enterFamily(profile.familyId || null);
 });
 
 /* ================= Семейство ================= */
@@ -407,9 +410,12 @@ async function loadMembersFromProfiles(familyId) {
   try {
     const snap = await getDocs(query(collection(db, 'users'), where('familyId', '==', familyId)));
     const known = new Set(state.familyMembers.map((m) => m.uid));
+    state.pushTopics.clear();
+    state.pushLoadedAt = Date.now();
     for (const d of snap.docs) {
-      const email = d.data().email;
+      const { email, ntfyTopic, ntfyOn } = d.data();
       if (email && !known.has(d.id)) state.familyMembers.push({ uid: d.id, email });
+      if (ntfyOn && ntfyTopic) state.pushTopics.set(d.id, ntfyTopic);
     }
     if (state.familyId === familyId) render();
   } catch (err) {
@@ -843,6 +849,18 @@ function explainError(err, t, action) {
   return toast({ text: 'Промяната не беше записана', sub: `Неочаквана грешка (${code || 'без код'}). Опитай пак.`, duration: 6000 });
 }
 
+// кого да уведомим при промяна на задача
+function notifyChange(t, action) {
+  const boss = t.assignedBy || t.createdBy; // който е възложил задачата
+  if (action === 'assign' && t.assignee) {
+    pushTo([t.assignee], { title: `${myName()} ти възложи задача`, message: t.text, path: '#/list/mine' });
+  } else if (action === 'accept') {
+    pushTo([boss], { title: `${myName()} прие задачата`, message: t.text, path: '#/list/all' });
+  } else if (action === 'done' && t.assignee) {
+    pushTo([boss], { title: `${myName()} свърши задачата`, message: t.text, path: '#/list/all' });
+  }
+}
+
 async function saveTodo(t, changes, action) {
   const before = {};
   for (const key of Object.keys(changes)) before[key] = t[key];
@@ -850,6 +868,7 @@ async function saveTodo(t, changes, action) {
   render();
   try {
     await updateDoc(doc(db, 'todos', t.id), { ...changes, ...changeMeta(action) });
+    notifyChange(t, action);
   } catch (err) {
     Object.assign(t, before); // връщаме екрана както си беше
     render();
@@ -1018,6 +1037,11 @@ composer.addEventListener('submit', async (e) => {
 
   try {
     await addDoc(collection(db, 'todos'), todo);
+    if (todo.assignee && todo.assignee !== state.user.uid) {
+      pushTo([todo.assignee], { title: `${myName()} ти възложи задача`, message: text, path: '#/list/mine' });
+    } else {
+      pushTo(otherUids(), { title: `${myName()} добави задача`, message: `${catOf(todo.category).short}: ${text}`, path: '#/list/all' });
+    }
   } catch (err) {
     console.error(err);
     input.value = text;
@@ -1209,6 +1233,91 @@ updateBell();
 // обновява „преди N мин“ и „Днес“ всяка минута
 setInterval(() => { if (state.todos.length) render(); }, 60_000);
 
+
+/* ================= Известия при затворено приложение (ntfy) ================= */
+
+// Всеки има свой таен канал в ntfy.sh. Приложението праща известие
+// само на хората, за които се отнася промяната. Без сървър и без плащане.
+state.push = { topic: null, on: false };
+state.pushTopics = new Map();   // uid → канал (само на включилите)
+state.pushLoadedAt = 0;
+
+const myName = () => nameOf(state.user.email, { me: null });
+const otherUids = () => members().map((m) => m.uid).filter((uid) => uid !== state.user.uid);
+
+function newTopic() {
+  const bytes = crypto.getRandomValues(new Uint8Array(12));
+  return 'semeini-' + [...bytes].map((b) => b.toString(36).padStart(2, '0')).join('').slice(0, 20);
+}
+
+async function sendNtfy(topic, { title, message, path = '' }) {
+  // без Content-Type — браузърът не прави допълнителна CORS проверка
+  const res = await fetch('https://ntfy.sh/', {
+    method: 'POST',
+    body: JSON.stringify({
+      topic,
+      title,
+      message: String(message).slice(0, 300),
+      click: `${location.origin}${location.pathname}${path}`,
+      tags: ['memo'],
+    }),
+  });
+  if (!res.ok) throw new Error(`ntfy ${res.status}`);
+}
+
+// изпраща до избрани членове (никога до теб самия)
+async function pushTo(uids, msg) {
+  try {
+    if (Date.now() - state.pushLoadedAt > 5 * 60_000) await loadMembersFromProfiles(state.familyId);
+    const topics = [...new Set(uids)]
+      .filter((uid) => uid && uid !== state.user.uid)
+      .map((uid) => state.pushTopics.get(uid))
+      .filter(Boolean);
+    await Promise.all(topics.map((topic) => sendNtfy(topic, msg)));
+  } catch (err) {
+    console.warn('Известието през ntfy не беше изпратено', err);
+  }
+}
+
+function updatePushUI() {
+  $('pushToggle').checked = state.push.on;
+  $('pushSteps').hidden = !state.push.on;
+  $('pushTopic').textContent = state.push.topic || '';
+}
+
+$('pushToggle').addEventListener('change', async (e) => {
+  const on = e.target.checked;
+  const topic = state.push.topic || newTopic();
+  try {
+    await setDoc(doc(db, 'users', state.user.uid), { ntfyTopic: topic, ntfyOn: on }, { merge: true });
+    state.push = { topic, on };
+    updatePushUI();
+    state.pushLoadedAt = 0; // другите ще го видят при следващото изпращане
+    if (on) toast({ text: 'Известията са включени', sub: 'Изпълни стъпките отдолу на този телефон.', duration: 5000 });
+  } catch (err) {
+    e.target.checked = !on;
+    toast({ text: 'Настройката не беше записана', sub: 'Провери връзката и опитай пак.' });
+  }
+});
+
+$('copyTopicBtn').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(state.push.topic);
+    toast({ text: 'Името на канала е копирано', sub: 'Постави го в ntfy след +.' });
+  } catch {
+    prompt('Копирай името на канала:', state.push.topic);
+  }
+});
+
+$('testPushBtn').addEventListener('click', async () => {
+  try {
+    await sendNtfy(state.push.topic, { title: 'Семейни задачи', message: 'Пробно известие — работи!' });
+    toast({ text: 'Изпратено', sub: 'До секунди трябва да дойде известие от ntfy.' });
+  } catch (err) {
+    console.warn(err);
+    toast({ text: 'Известието не беше изпратено', sub: 'Провери интернет връзката.' });
+  }
+});
 
 /* ================= Чат: общ и лични разговори ================= */
 
@@ -1532,6 +1641,8 @@ $('chatForm').addEventListener('submit', async (e) => {
       }),
     ]);
     markRead(entry.id);
+    if (entry.family) pushTo(otherUids(), { title: `${myName()} в семейния чат`, message: text, path: '#/chat/fam' });
+    else pushTo([entry.key], { title: `${myName()} ти писа`, message: text, path: `#/chat/${state.user.uid}` });
   } catch (err) {
     chatInput.value = text;
     $('chatSend').disabled = false;

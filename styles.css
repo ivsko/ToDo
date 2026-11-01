@@ -562,6 +562,21 @@ input[role="switch"]:checked::after { transform: translateX(20px); }
 .chat-composer textarea::placeholder { color: var(--muted); }
 .chat-composer .send-btn { background: var(--primary); }
 
+/* ---------- Известия през ntfy ---------- */
+.push-box {
+  display: grid; gap: 10px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+}
+.push-box > .muted { margin-top: -2px; }
+.push-steps { display: grid; gap: 12px; padding-left: 20px; font-size: .92rem; }
+.push-steps li::marker { color: var(--muted); font-weight: 600; }
+.push-steps a { color: var(--primary); font-weight: 500; }
+.push-steps .btn-sm { display: inline-flex; margin-top: 6px; }
+.topic-box { margin-top: 8px; padding: 10px 12px; }
+.topic { font-size: .9rem; letter-spacing: .02em; overflow-wrap: anywhere; }
+
 /* ---------- Съобщения ---------- */
 .toasts {
   position: fixed; z-index: 50;

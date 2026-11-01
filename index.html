@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=11" />
+  <link rel="stylesheet" href="styles.css?v=12" />
 </head>
 
 <body>
@@ -244,10 +244,40 @@
         <ul id="membersList" class="members"></ul>
       </div>
 
+      <div class="push-box">
+        <label class="switch-row">
+          <span>
+            <span class="strong">Известия при затворено приложение</span>
+            <span class="muted small">Безплатно, чрез приложението ntfy</span>
+          </span>
+          <input id="pushToggle" type="checkbox" role="switch" />
+        </label>
+
+        <ol id="pushSteps" class="push-steps" hidden>
+          <li>
+            Инсталирай безплатното приложение <b>ntfy</b> от
+            <a href="https://play.google.com/store/apps/details?id=io.heckel.ntfy" target="_blank" rel="noopener">Google Play</a>
+            или <a href="https://apps.apple.com/app/ntfy/id1625396347" target="_blank" rel="noopener">App Store</a>.
+          </li>
+          <li>
+            В ntfy натисни <b>+</b>, постави името на твоя канал и натисни <b>Subscribe</b>.
+            <span class="code-box topic-box">
+              <span id="pushTopic" class="code topic"></span>
+              <button id="copyTopicBtn" type="button" class="btn btn-soft btn-sm">Копирай</button>
+            </span>
+          </li>
+          <li>
+            Провери дали работи:
+            <button id="testPushBtn" type="button" class="btn btn-soft btn-sm">Изпрати пробно известие</button>
+          </li>
+        </ol>
+        <p class="muted small">Каналът е само твой. Не го споделяй — който знае името, вижда известията.</p>
+      </div>
+
       <label class="switch-row">
         <span>
-          <span class="strong">Известия</span>
-          <span class="muted small">Когато някой добави, промени или ти възложи задача</span>
+          <span class="strong">Известия, докато приложението е отворено</span>
+          <span class="muted small">Изскачат на екрана, когато приложението е на заден план</span>
         </span>
         <input id="notifToggle" type="checkbox" role="switch" />
       </label>
@@ -260,6 +290,6 @@
 
   <div id="toasts" class="toasts" aria-live="polite"></div>
 
-  <script type="module" src="app.js?v=11"></script>
+  <script type="module" src="app.js?v=12"></script>
 </body>
 </html>
