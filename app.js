@@ -101,6 +101,7 @@ const state = {
   unsubscribe: null,
   firstSnapshot: true,
   freshIds: new Set(),
+  names: new Map(),          // имейл → име, което човекът си е избрал
   notify: store.get('notify', '0') === '1' && 'Notification' in window && Notification.permission === 'granted',
 };
 
@@ -135,9 +136,14 @@ function relTime(ms) {
 
 /* ================= Хора ================= */
 
+// само малкото име — за бутоните с хора
+const firstName = (email, me = 'Аз') => nameOf(email, { me }).split(' ')[0];
+
 function nameOf(email, { me = 'Ти' } = {}) {
   if (!email) return 'Някой';
   if (me !== null && state.user && email === state.user.email) return me;
+  const chosen = state.names.get(email);
+  if (chosen) return chosen;
   return email.split('@')[0]
     .split(/[._-]+/)
     .filter(Boolean)
@@ -156,7 +162,7 @@ function avatarEl(email, cls = '') {
   const el = document.createElement('span');
   el.className = `avatar ${cls}`.trim();
   el.style.setProperty('--av', colorOf(email));
-  el.textContent = (email || '?').charAt(0).toUpperCase();
+  el.textContent = (state.names.get(email) || email || '?').charAt(0).toUpperCase();
   return el;
 }
 
@@ -347,16 +353,12 @@ onAuthStateChanged(auth, async (user) => {
 
   $('auth-section').hidden = true;
   $('todo-section').hidden = false;
-  $('user-info').textContent = user.email;
-  $('homeEmail').textContent = user.email;
-  for (const id of ['menuAvatar', 'menuAvatarLg']) {
-    const el = $(id);
-    el.textContent = user.email.charAt(0).toUpperCase();
-    el.style.setProperty('--av', colorOf(user.email));
-  }
 
   const snap = await getDoc(doc(db, 'users', user.uid));
   const profile = snap.exists() ? snap.data() : {};
+  if (profile.name) state.names.set(user.email, profile.name);
+  $('nameInput').value = profile.name || '';
+  showMyName();
   state.push = { topic: profile.ntfyTopic || null, on: Boolean(profile.ntfyOn && profile.ntfyTopic) };
   updatePushUI();
   await enterFamily(profile.familyId || null);
@@ -413,7 +415,8 @@ async function loadMembersFromProfiles(familyId) {
     state.pushTopics.clear();
     state.pushLoadedAt = Date.now();
     for (const d of snap.docs) {
-      const { email, ntfyTopic, ntfyOn } = d.data();
+      const { email, ntfyTopic, ntfyOn, name } = d.data();
+      if (email && name) state.names.set(email, name);
       if (email && !known.has(d.id)) state.familyMembers.push({ uid: d.id, email });
       if (ntfyOn && ntfyTopic) state.pushTopics.set(d.id, ntfyTopic);
     }
@@ -964,7 +967,7 @@ function renderComposerWho() {
   everyone.onclick = () => setNewAssignee(null);
 
   const people = members().map((m) => {
-    const b = chip({ label: nameOf(m.email, { me: 'Аз' }), color: colorOf(m.email), checked: state.newAssignee === m.uid, dot: false });
+    const b = chip({ label: firstName(m.email), color: colorOf(m.email), checked: state.newAssignee === m.uid, dot: false });
     b.prepend(avatarEl(m.email, 'avatar-sm'));
     b.onclick = () => setNewAssignee(m.uid);
     return b;
@@ -1121,7 +1124,7 @@ function renderDetail() {
   const nobody = chip({ label: 'Всеки', color: 'var(--primary)', checked: !draft.assignee, dot: false });
   nobody.onclick = () => { draft.assignee = null; renderDetail(); };
   const people = members().map((m) => {
-    const b = chip({ label: nameOf(m.email, { me: 'Аз' }), color: colorOf(m.email), checked: draft.assignee === m.uid, dot: false });
+    const b = chip({ label: firstName(m.email), color: colorOf(m.email), checked: draft.assignee === m.uid, dot: false });
     b.prepend(avatarEl(m.email, 'avatar-sm'));
     b.onclick = () => { draft.assignee = m.uid; renderDetail(); };
     return b;
@@ -1212,12 +1215,24 @@ $('deleteTodoBtn').addEventListener('click', () => {
 
 /* ================= Меню ================= */
 
-$('menuBtn').addEventListener('click', () => {
+function renderMembers() {
   $('membersList').replaceChildren(...members().map((m) => {
     const li = document.createElement('li');
-    li.append(avatarEl(m.email), m.uid === state.user.uid ? `${m.email} (ти)` : m.email);
+    const label = document.createElement('span');
+    label.className = 'member-label';
+    const nm = document.createElement('span');
+    nm.textContent = nameOf(m.email, { me: null }) + (m.uid === state.user.uid ? ' (ти)' : '');
+    const em = document.createElement('span');
+    em.className = 'muted small';
+    em.textContent = m.email;
+    label.append(nm, em);
+    li.append(avatarEl(m.email), label);
     return li;
   }));
+}
+
+$('menuBtn').addEventListener('click', () => {
+  renderMembers();
   $('menuDialog').showModal();
 });
 $('bellBtn').addEventListener('click', () => setNotify(!state.notify));
@@ -1231,7 +1246,48 @@ for (const dlg of [detail, $('menuDialog')]) {
 updateBell();
 
 // обновява „преди N мин“ и „Днес“ всяка минута
-setInterval(() => { if (state.todos.length) render(); }, 60_000);
+setInterval(() => {
+  // на всеки 5 мин обновяваме имената и каналите на членовете
+  if (state.familyId && Date.now() - state.pushLoadedAt > 5 * 60_000) loadMembersFromProfiles(state.familyId);
+  if (state.todos.length) render();
+}, 60_000);
+
+/* ================= Име в профила ================= */
+
+function showMyName() {
+  const email = state.user.email;
+  const shown = nameOf(email, { me: null });
+  $('user-info').textContent = shown;
+  $('homeEmail').textContent = state.names.get(email) ? `${shown}, ${email}` : email;
+  for (const id of ['menuAvatar', 'menuAvatarLg']) {
+    const el = $(id);
+    el.textContent = shown.charAt(0).toUpperCase();
+    el.style.setProperty('--av', colorOf(email));
+  }
+}
+
+async function saveName() {
+  const name = $('nameInput').value.trim().replace(/\s+/g, ' ').slice(0, 30);
+  try {
+    await setDoc(doc(db, 'users', state.user.uid), { name: name || null }, { merge: true });
+    if (name) state.names.set(state.user.email, name);
+    else state.names.delete(state.user.email);
+    $('nameInput').value = name;
+    $('nameInput').blur();
+    showMyName();
+    renderMembers();
+    render();
+    toast({ text: name ? `Вече си „${name}“` : 'Името е изтрито', sub: name ? 'Останалите ще го видят до няколко минути.' : 'Пак ще се показва имейлът ти.' });
+  } catch (err) {
+    console.error(err);
+    toast({ text: 'Името не беше записано', sub: 'Провери връзката и опитай пак.' });
+  }
+}
+
+$('saveNameBtn').addEventListener('click', saveName);
+$('nameInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); saveName(); } // Enter не затваря менюто
+});
 
 
 /* ================= Известия при затворено приложение (ntfy) ================= */

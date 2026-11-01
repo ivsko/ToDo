@@ -374,11 +374,11 @@ svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; 
 .composer-cats::-webkit-scrollbar { display: none; }
 .composer-who { display: none; }
 .composer.open .composer-who {
-  display: flex; gap: 6px; align-items: center;
-  overflow-x: auto; scrollbar-width: none;
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
   padding: 0 2px 8px;
 }
 .composer-who::-webkit-scrollbar { display: none; }
+.composer-who .chip { padding: 6px 10px; font-size: .84rem; gap: 5px; }
 .who-label { flex: none; font-size: .82rem; color: var(--muted); margin-right: 2px; }
 
 /* ---------- Чипове ---------- */
@@ -561,6 +561,11 @@ input[role="switch"]:checked::after { transform: translateX(20px); }
 .chat-composer .composer-row { padding-left: 16px; }
 .chat-composer textarea::placeholder { color: var(--muted); }
 .chat-composer .send-btn { background: var(--primary); }
+
+/* ---------- Име в профила ---------- */
+.name-row { display: flex; gap: 8px; }
+.name-row input { flex: 1; min-width: 0; }
+.member-label { display: grid; line-height: 1.25; }
 
 /* ---------- Известия през ntfy ---------- */
 .push-box {
