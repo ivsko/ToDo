@@ -745,6 +745,12 @@ function taskEl(t) {
   const meta = document.createElement('div');
   meta.className = 'task-meta';
 
+  // кой е сложил задачата — винаги първо
+  const from = document.createElement('span');
+  from.className = 'meta meta-from';
+  from.append(avatarEl(t.createdByEmail, 'avatar-sm'), `от ${nameOf(t.createdByEmail, { me: 'теб' })}`);
+  meta.append(from);
+
   if (inSmart) {
     const c = document.createElement('span');
     c.className = 'meta meta-cat';
@@ -765,7 +771,7 @@ function taskEl(t) {
     const mine = t.assignee === state.user.uid;
     const a = document.createElement('span');
     a.className = 'meta';
-    let label = nameOf(email);
+    let label = `за ${nameOf(email, { me: 'теб' })}`;
     if (!t.done && !t.accepted) {
       a.classList.add('meta-wait');
       label = mine ? 'за теб, не е приета' : `чака ${nameOf(email)}`;
@@ -773,7 +779,7 @@ function taskEl(t) {
       a.classList.add('meta-ok');
       label = mine ? 'ти я прие' : `${nameOf(email)} я прие`;
     }
-    a.append(avatarEl(email, 'avatar-sm'), label);
+    a.append('→ ', avatarEl(email, 'avatar-sm'), label);
     meta.append(a);
   }
   if (t.done && t.doneByEmail && t.doneByEmail !== state.user.email) {

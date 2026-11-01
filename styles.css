@@ -282,6 +282,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; 
 .meta { display: inline-flex; align-items: center; gap: 4px; }
 .meta svg { width: 14px; height: 14px; }
 .meta-cat::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--cat); }
+.meta-from { color: var(--ink); opacity: .8; }
 .meta-due.today { color: var(--primary); font-weight: 500; }
 .meta-due.late { color: var(--danger); font-weight: 600; }
 
