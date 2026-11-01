@@ -93,6 +93,7 @@ const state = {
   todos: [],
   list: null,                 // отвореният списък или null за началния екран
   newCat: store.get('newCat', CATEGORIES[0].id),
+  newAssignee: null,          // на кого е новата задача (null = на всеки)
   unsubscribe: null,
   firstSnapshot: true,
   freshIds: new Set(),
@@ -485,6 +486,7 @@ function route() {
 
   $('homeView').hidden = Boolean(state.list);
   $('listView').hidden = !state.list;
+  state.newAssignee = state.list?.key === 'mine' ? state.user?.uid ?? null : null;
   if (state.list) {
     document.documentElement.style.setProperty('--accent', state.list.color);
     if (state.list.cat) setNewCat(state.list.cat, { silent: true });
@@ -607,6 +609,7 @@ function renderList() {
   $('doneTitle').textContent = `Завършени ${done.length}`;
   $('doneList').replaceChildren(...done.map(taskEl));
 
+  renderComposerWho();
   state.freshIds.clear(); // подсветката на новите задачи е еднократна
 }
 
@@ -788,6 +791,31 @@ function setNewCat(id, { silent = false } = {}) {
 }
 setNewCat(catOf(state.newCat).id, { silent: true });
 
+// „За кого“ при добавяне: Всеки, Аз и останалите членове
+function renderComposerWho() {
+  const box = $('composerWho');
+  if (!state.user) return;
+  const label = document.createElement('span');
+  label.className = 'who-label';
+  label.textContent = 'За:';
+
+  const everyone = chip({ label: 'Всеки', color: 'var(--accent)', checked: !state.newAssignee, dot: false });
+  everyone.onclick = () => setNewAssignee(null);
+
+  const people = members().map((m) => {
+    const b = chip({ label: nameOf(m.email, { me: 'Аз' }), color: colorOf(m.email), checked: state.newAssignee === m.uid, dot: false });
+    b.prepend(avatarEl(m.email, 'avatar-sm'));
+    b.onclick = () => setNewAssignee(m.uid);
+    return b;
+  });
+  box.replaceChildren(label, everyone, ...people);
+}
+
+function setNewAssignee(uid) {
+  state.newAssignee = uid;
+  renderComposerWho();
+}
+
 const input = $('newTodo');
 const composer = $('composer');
 
@@ -831,12 +859,16 @@ composer.addEventListener('submit', async (e) => {
   };
   if (list?.key === 'today' || list?.key === 'planned') todo.due = today();
   if (list?.key === 'important') todo.important = true;
-  if (list?.key === 'mine') todo.assignee = state.user.uid;
+  const assignee = state.newAssignee || (list?.key === 'mine' ? state.user.uid : null);
+  if (assignee) todo.assignee = assignee;
 
   input.value = '';
   autosize(input);
   syncAddBtn();
   buzz();
+  if (assignee && assignee !== state.user.uid) {
+    toast({ text: `Възложено на ${nameOf(emailOfUid(assignee))}`, sub: text, email: emailOfUid(assignee) });
+  }
 
   try {
     await addDoc(collection(db, 'todos'), todo);
