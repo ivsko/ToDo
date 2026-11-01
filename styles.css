@@ -246,6 +246,21 @@ svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; 
 .done > .check::before, .check.on::before { background: var(--ok); border-color: var(--ok); }
 .done > .check svg, .check.on svg { opacity: 1; stroke: #fff; }
 .ticking > .check::before { animation: pop .3s ease-out; }
+/* заключено: задачата е възложена на друг */
+.check.locked::before { border-style: dashed; opacity: .55; }
+.check.locked svg { display: none; }
+
+.accept-btn {
+  flex: none; align-self: center;
+  margin-right: 8px;
+  padding: 7px 14px;
+  border: 0; border-radius: 999px;
+  background: var(--accent); color: #fff;
+  font-size: .85rem; font-weight: 600;
+}
+.accept-btn:active { transform: scale(.95); }
+.meta-wait { color: var(--star); font-weight: 500; }
+.meta-ok { color: var(--ok); font-weight: 500; }
 .ticking.done { opacity: .5; }
 @keyframes pop { 50% { transform: scale(1.25); } }
 

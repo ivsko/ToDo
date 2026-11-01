@@ -278,6 +278,10 @@ function announceChanges(snapshot) {
       state.freshIds.add(t.id);
       toast({ text: `${who} промени задача`, sub: t.text, email: t.updatedByEmail });
       systemNotify(`${who} промени задача`, `${cat}: ${t.text}`, `todo-${t.id}`);
+    } else if (t.lastAction === 'accept' && (t.assignedBy || t.createdBy) === me) {
+      toast({ text: `${who} прие задачата`, sub: t.text, email: t.updatedByEmail });
+      systemNotify(`${who} прие задачата`, t.text, `todo-${t.id}`);
+      buzz([10, 60, 10]);
     } else if (t.lastAction === 'done') {
       toast({ text: `${who} отметна`, sub: t.text, email: t.updatedByEmail });
       systemNotify(`${who} отметна задача`, t.text, `todo-${t.id}`);
@@ -639,6 +643,20 @@ function taskList(items) {
   return ul;
 }
 
+// Възложена задача отмята само човекът, на когото е
+const lockedFor = (t) => Boolean(t.assignee) && t.assignee !== state.user?.uid;
+
+function lockedToast(t) {
+  const email = emailOfUid(t.assignee);
+  toast({ text: `Само ${nameOf(email)} може да я отметне`, sub: t.text, email });
+  buzz([8, 40, 8]);
+}
+
+function acceptTodo(t) {
+  buzz();
+  return saveTodo(t, { accepted: true, acceptedAt: Date.now() }, 'accept');
+}
+
 function taskEl(t) {
   const cat = catOf(t.category);
   const inSmart = state.list?.smart;
@@ -656,7 +674,13 @@ function taskEl(t) {
   check.style.setProperty('--cat', inSmart ? cat.color : 'var(--accent)');
   check.innerHTML = svg('check');
   check.setAttribute('aria-label', t.done ? 'Върни като незавършена' : 'Отметни като готова');
+  const locked = lockedFor(t);
+  if (locked) {
+    check.classList.add('locked');
+    check.setAttribute('aria-label', `Само ${nameOf(emailOfUid(t.assignee))} може да я отметне`);
+  }
   check.onclick = () => {
+    if (locked) return lockedToast(t);
     if (li.dataset.busy) return;
     li.dataset.busy = '1';
     li.classList.toggle('done', !t.done);
@@ -694,9 +718,18 @@ function taskEl(t) {
   }
   if (t.assignee) {
     const email = emailOfUid(t.assignee);
+    const mine = t.assignee === state.user.uid;
     const a = document.createElement('span');
     a.className = 'meta';
-    a.append(avatarEl(email, 'avatar-sm'), nameOf(email));
+    let label = nameOf(email);
+    if (!t.done && !t.accepted) {
+      a.classList.add('meta-wait');
+      label = mine ? 'за теб, не е приета' : `чака ${nameOf(email)}`;
+    } else if (!t.done) {
+      a.classList.add('meta-ok');
+      label = mine ? 'ти я прие' : `${nameOf(email)} я прие`;
+    }
+    a.append(avatarEl(email, 'avatar-sm'), label);
     meta.append(a);
   }
   if (t.done && t.doneByEmail && t.doneByEmail !== state.user.email) {
@@ -717,6 +750,17 @@ function taskEl(t) {
   star.setAttribute('aria-label', t.important ? 'Махни от важни' : 'Отбележи като важна');
   star.setAttribute('aria-pressed', String(Boolean(t.important)));
   star.onclick = () => saveTodo(t, { important: !t.important }, 'star');
+
+  // „Приеми“ — само за човека, на когото е възложена
+  if (t.assignee === state.user.uid && !t.accepted && !t.done) {
+    const accept = document.createElement('button');
+    accept.type = 'button';
+    accept.className = 'accept-btn';
+    accept.textContent = 'Приеми';
+    accept.onclick = () => acceptTodo(t);
+    li.append(check, body, accept);
+    return li;
+  }
 
   li.append(check, body, star);
   return li;
@@ -746,11 +790,13 @@ async function saveTodo(t, changes, action) {
 
 function toggleDone(t) {
   const done = !t.done;
-  return saveTodo(t, {
+  const changes = {
     done,
     doneByEmail: done ? state.user.email : null,
     doneAt: done ? Date.now() : null,
-  }, done ? 'done' : 'undone');
+  };
+  if (done && t.assignee && !t.accepted) Object.assign(changes, { accepted: true, acceptedAt: Date.now() });
+  return saveTodo(t, changes, done ? 'done' : 'undone');
 }
 
 async function removeTodo(t) {
@@ -879,7 +925,11 @@ composer.addEventListener('submit', async (e) => {
   if (list?.key === 'today' || list?.key === 'planned') todo.due = today();
   if (list?.key === 'important') todo.important = true;
   const assignee = state.newAssignee || (list?.key === 'mine' ? state.user.uid : null);
-  if (assignee) todo.assignee = assignee;
+  if (assignee) {
+    todo.assignee = assignee;
+    todo.assignedBy = state.user.uid;
+    todo.accepted = assignee === state.user.uid; // на себе си — приета веднага
+  }
 
   input.value = '';
   autosize(input);
@@ -914,6 +964,7 @@ function openDetail(t) {
     assignee: t.assignee || null,
     important: Boolean(t.important),
     done: Boolean(t.done),
+    accepted: Boolean(t.accepted),
   };
   $('detailText').value = t.text;
   renderDetail();
@@ -931,6 +982,10 @@ function renderDetail() {
   check.classList.toggle('on', draft.done);
   check.style.setProperty('--cat', cat.color);
   check.setAttribute('aria-label', draft.done ? 'Върни като незавършена' : 'Отметни като готова');
+  check.classList.toggle('locked', detailLocked());
+
+  // „Приеми задачата“ — за човека, на когото е възложена
+  $('detailAccept').hidden = !(editing.assignee === state.user.uid && draft.assignee === state.user.uid && !draft.accepted && !draft.done);
 
   const star = $('detailStar');
   star.innerHTML = svg('star');
@@ -989,11 +1044,22 @@ function renderDetail() {
 
   const t = editing;
   let info = `Добавена от ${nameOf(t.createdByEmail, { me: 'теб' })} ${relTime(t.created)}`;
+  if (t.assignee && t.accepted && !t.done) info += `. Приета от ${nameOf(emailOfUid(t.assignee), { me: 'теб' })}`;
+  if (t.assignee && !t.accepted && !t.done) info += t.assignee === state.user.uid ? '. Чака да я приемеш' : `. Чака ${nameOf(emailOfUid(t.assignee))} да я приеме`;
   if (t.done && t.doneByEmail) info += `. Отметната от ${nameOf(t.doneByEmail, { me: 'теб' })}`;
   $('detailInfo').textContent = info;
 }
 
-$('detailCheck').addEventListener('click', () => { draft.done = !draft.done; buzz(); renderDetail(); });
+// заключено, ако задачата е (или става) възложена на друг
+const detailLocked = () => lockedFor(editing) || lockedFor(draft);
+
+$('detailCheck').addEventListener('click', () => {
+  if (detailLocked()) return lockedToast(lockedFor(editing) ? editing : draft);
+  draft.done = !draft.done;
+  buzz();
+  renderDetail();
+});
+$('detailAccept').addEventListener('click', () => { draft.accepted = true; buzz(); renderDetail(); });
 $('detailStar').addEventListener('click', () => { draft.important = !draft.important; renderDetail(); });
 $('detailText').addEventListener('input', (e) => autosize(e.target));
 
@@ -1009,17 +1075,30 @@ detail.addEventListener('close', () => {
   if ((draft.due || null) !== (t.due || null)) changes.due = draft.due;
   if (draft.important !== Boolean(t.important)) changes.important = draft.important;
   const assigneeChanged = (draft.assignee || null) !== (t.assignee || null);
-  if (assigneeChanged) changes.assignee = draft.assignee;
+  if (assigneeChanged) {
+    changes.assignee = draft.assignee;
+    changes.assignedBy = state.user.uid;
+    changes.accepted = draft.assignee === state.user.uid; // новият човек трябва да я приеме
+    changes.acceptedAt = changes.accepted ? Date.now() : null;
+  } else if (draft.accepted && !t.accepted) {
+    changes.accepted = true;
+    changes.acceptedAt = Date.now();
+  }
   if (draft.done !== Boolean(t.done)) {
     changes.done = draft.done;
     changes.doneByEmail = draft.done ? state.user.email : null;
     changes.doneAt = draft.done ? Date.now() : null;
+    if (draft.done && t.assignee && !t.accepted && !assigneeChanged) {
+      changes.accepted = true;
+      changes.acceptedAt = Date.now();
+    }
   }
   if (!Object.keys(changes).length) return;
 
   const action = assigneeChanged && draft.assignee && draft.assignee !== state.user.uid ? 'assign'
     : changes.text || changes.category || 'due' in changes ? 'edit'
     : 'done' in changes ? (draft.done ? 'done' : 'undone')
+    : changes.accepted ? 'accept'
     : 'edit';
   saveTodo(t, changes, action);
 });

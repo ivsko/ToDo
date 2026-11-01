@@ -28,7 +28,24 @@ service cloud.firestore {
 
     // задачите са видими само за членовете на същото семейство
     match /todos/{todoId} {
-      allow read, update, delete: if signedIn() && resource.data.familyId == myFamily();
+      allow read, delete: if signedIn() && resource.data.familyId == myFamily();
+
+      // възложена задача отмята и приема само човекът, на когото е;
+      // другите могат да я редактират или да я възложат на друг
+      allow update: if signedIn() && resource.data.familyId == myFamily()
+        && (
+          resource.data.get('assignee', null) == null
+          || resource.data.assignee == request.auth.uid
+          || (
+            // не пипат отметката, а „приета“ могат само да нулират (при ново възлагане)
+            !request.resource.data.diff(resource.data).affectedKeys().hasAny(['done', 'doneByEmail', 'doneAt'])
+            && (
+              !request.resource.data.diff(resource.data).affectedKeys().hasAny(['accepted'])
+              || request.resource.data.accepted == false
+              || request.resource.data.get('assignee', null) == request.auth.uid  // поемаш я сам
+            )
+          )
+        );
       allow create: if signedIn() && request.resource.data.familyId == myFamily();
     }
   }
