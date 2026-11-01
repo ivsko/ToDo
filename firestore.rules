@@ -1,0 +1,30 @@
+rules_version = '2';
+
+// Копирай в Firebase Console → Firestore Database → Rules → Publish
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function myFamily() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.familyId;
+    }
+
+    // всеки вижда и променя само своя профил
+    match /users/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    // групата се чете по код (за присъединяване), създава се от логнат потребител
+    match /families/{familyId} {
+      allow get: if signedIn();
+      allow create: if signedIn() && request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if signedIn() && resource.data.createdBy == request.auth.uid;
+    }
+
+    // задачите са видими само за членовете на същото семейство
+    match /todos/{todoId} {
+      allow read, update, delete: if signedIn() && resource.data.familyId == myFamily();
+      allow create: if signedIn() && request.resource.data.familyId == myFamily();
+    }
+  }
+}

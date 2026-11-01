@@ -2,101 +2,155 @@
 <html lang="bg">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="styles.css">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
-  <script> navigator.serviceWorker.register('firebase-messaging-sw.js'); </script>
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#F3F4F8" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#14161D" media="(prefers-color-scheme: dark)" />
+  <title>Семейни задачи</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css?v=5" />
 </head>
 
 <body>
-  <main>
+  <!-- ВХОД / РЕГИСТРАЦИЯ -->
+  <section id="auth-section" class="screen auth" hidden>
+    <div class="auth-box">
+      <h1 class="brand">Заедно</h1>
+      <p class="auth-lead">Общият списък със задачи на семейството ви.</p>
 
-    
+      <form id="authForm" class="auth-form">
+        <label class="field">
+          <span>Имейл</span>
+          <input id="email" type="email" autocomplete="email" required />
+        </label>
+        <label class="field">
+          <span>Парола</span>
+          <input id="password" type="password" autocomplete="current-password" minlength="6" required />
+        </label>
+        <p id="authError" class="form-error" role="alert"></p>
+        <button id="loginBtn" type="submit" class="btn btn-primary">Вход</button>
+        <button id="registerBtn" type="button" class="btn btn-ghost">Нов профил</button>
+      </form>
+    </div>
+  </section>
 
-    <!-- LOGIN / REGISTER -->
-    <div id="auth-section" class="card">
-      <input id="email" type="email" placeholder="Email" />
-      <input id="password" type="password" placeholder="Парола" />
-      <button id="loginBtn">Вход</button>
-      <button id="registerBtn">Регистрация</button>
+  <!-- ПРИЛОЖЕНИЕ -->
+  <section id="todo-section" class="screen app" hidden>
+
+    <header class="topbar">
+      <div class="topbar-title">
+        <span class="brand brand-sm">Заедно</span>
+        <h2 id="familyName">Семейство</h2>
+      </div>
+      <button id="bellBtn" class="icon-btn" type="button" aria-label="Известия" title="Известия">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10a6 6 0 1 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
+      </button>
+      <button id="menuBtn" class="avatar avatar-btn" type="button" aria-label="Профил"></button>
+    </header>
+
+    <!-- БЕЗ СЕМЕЙСТВО -->
+    <div id="familyNotJoined" class="onboard" hidden>
+      <h3>Свържи се със семейството си</h3>
+      <p class="muted">Създай група и сподели кода ѝ, или въведи код, който някой ти е дал.</p>
+
+      <form id="createFamilyForm" class="onboard-block">
+        <label class="field">
+          <span>Име на семейството</span>
+          <input id="familyNameInput" type="text" placeholder="напр. Колеви" required />
+        </label>
+        <button class="btn btn-primary" type="submit">Създай група</button>
+      </form>
+
+      <div class="or"><span>или</span></div>
+
+      <form id="joinFamilyForm" class="onboard-block">
+        <label class="field">
+          <span>Семеен код</span>
+          <input id="joinFamilyInput" type="text" placeholder="FAM-XXXXXX" autocapitalize="characters" required />
+        </label>
+        <button class="btn btn-ghost" type="submit">Присъедини се</button>
+      </form>
     </div>
 
-    <!-- MAIN APP -->
-    <div id="todo-section" style="display: none">
-     
+    <!-- СПИСЪК -->
+    <div id="familyJoined" hidden>
+      <nav id="filterBar" class="filters" aria-label="Филтър по категория"></nav>
 
-      <!-- FAMILY SECTION -->
-      <div id="familySection" class="card">
+      <ul id="todo-list" class="todo-list" aria-live="polite"></ul>
 
-        <!-- NOT JOINED -->
-        <div id="familyNotJoined">
-          <h3>Семейна група</h3>
+      <details id="doneWrap" class="done-wrap" hidden>
+        <summary><span id="doneTitle">Готови</span><button id="clearDoneBtn" type="button" class="link-btn">Изчисти</button></summary>
+        <ul id="done-list" class="todo-list"></ul>
+      </details>
 
-          <input id="familyNameInput" type="text" placeholder="Име на семейството">
+      <p class="developer-tag">Разработено от Иван Колев</p>
+    </div>
 
-          <button id="createFamilyBtn">Създай семейство</button>
+    <!-- НОВА ЗАДАЧА -->
+    <form id="composer" class="composer" hidden>
+      <div class="composer-cats" id="composerCats" role="radiogroup" aria-label="Категория"></div>
+      <div class="composer-row">
+        <textarea id="newTodo" rows="1" placeholder="Какво трябва да се свърши?" aria-label="Нова задача"></textarea>
+        <button id="addTodoBtn" class="add-btn" type="submit" aria-label="Добави">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+    </form>
+  </section>
 
-          <input id="joinFamilyInput" type="text" placeholder="Въведи семеен код">
-          <button id="joinFamilyBtn">Присъедини се</button>
+  <!-- ПРОФИЛ / СЕМЕЙСТВО -->
+  <dialog id="menuDialog" class="sheet">
+    <form method="dialog" class="sheet-inner">
+      <div class="sheet-head">
+        <div id="menuAvatar" class="avatar avatar-lg"></div>
+        <div>
+          <p id="user-info" class="strong"></p>
+          <p class="muted" id="menuFamily"></p>
         </div>
-
-        <!-- JOINED -->
-        <div id="familyJoined" style="display:none;">
-
-        
-      
-        <p><b id="familyName"></b></p>
-        <p>Семеен код: <b id="familyCode"></b></p>
-        <p><b id="user-info"></b></p>
-      
-        <button id="logoutBtn" class="logoutBtn">Изход</button>
-      
-      </div>
-      
-
       </div>
 
-      <!-- ADD TODO -->
-      <div class="card">
-        <textarea id="newTodo" placeholder="Напиши нова задача..."></textarea>
-
-        <select id="category">
-          <option value="Хранителни стоки">Хранителни стоки</option>
-          <option value="Здраве">Здраве</option>
-          <option value="Дом">Дом</option>
-          <option value="Ремонт">Ремонт</option>
-          <option value="Работа">Работа</option>
-          <option value="Друго">Друго</option>
-        </select>
-
-        <button id="addTodoBtn">Добави</button>
+      <div class="code-box">
+        <div>
+          <p class="muted small">Код за покана</p>
+          <p id="familyCode" class="code"></p>
+        </div>
+        <button id="copyCodeBtn" type="button" class="btn btn-ghost btn-sm">Копирай</button>
       </div>
 
-      <!-- FILTER -->
-      <h3>Филтър по категория</h3>
-      <select id="filterCategory">
-        <option value="all">Всички</option>
-        <option value="Хранителни стоки">Хранителни стоки</option>
-        <option value="Здраве">Здраве</option>
-        <option value="Дом">Дом</option>
-        <option value="Ремонт">Ремонт</option>
-        <option value="Работа">Работа</option>
-        <option value="Друго">Друго</option>
-      </select>
+      <label class="switch-row">
+        <span>
+          <span class="strong">Известия</span>
+          <span class="muted small" id="notifHint">Когато някой добави или промени задача</span>
+        </span>
+        <input id="notifToggle" type="checkbox" role="switch" />
+      </label>
 
-      <!-- TODO LIST -->
-      <h3>Всички задачи</h3>
-      <div id="todo-list"></div>
+      <button id="leaveFamilyBtn" type="button" class="btn btn-ghost">Напусни групата</button>
+      <button id="logoutBtn" type="button" class="btn btn-ghost danger">Изход</button>
+      <button value="close" class="btn btn-primary">Затвори</button>
+    </form>
+  </dialog>
 
-      <div class="developer-tag">Разработено от: <span>Иван Колев</span></div>
+  <!-- РЕДАКЦИЯ -->
+  <dialog id="editDialog" class="sheet">
+    <form id="editForm" method="dialog" class="sheet-inner">
+      <h3>Редактирай задачата</h3>
+      <textarea id="editText" rows="3" aria-label="Текст на задачата"></textarea>
+      <div class="composer-cats" id="editCats" role="radiogroup" aria-label="Категория"></div>
+      <div class="sheet-actions">
+        <button value="cancel" formnovalidate class="btn btn-ghost">Отказ</button>
+        <button value="save" class="btn btn-primary">Запази</button>
+      </div>
+      <button id="deleteTodoBtn" type="button" class="btn btn-ghost danger">Изтрий задачата</button>
+    </form>
+  </dialog>
 
-    </div>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
 
-  </main>
-
-  <script type="module" src="app.js?v=4"></script>
+  <script type="module" src="app.js?v=5"></script>
 </body>
 </html>
