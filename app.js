@@ -12,6 +12,7 @@ import {
   where,
   setDoc,
   getDoc,
+  getDocs,
   arrayUnion,
 } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js';
 
@@ -360,10 +361,12 @@ async function enterFamily(familyId) {
     if (fam.exists()) {
       state.familyName = fam.data().name || '';
       state.familyMembers = fam.data().members || [];
+      loadMembersFromProfiles(familyId);
       // записваме се в списъка с членове (за избора „Кой да я свърши“)
       if (!state.familyMembers.some((m) => m.uid === state.user.uid)) {
         const me = { uid: state.user.uid, email: state.user.email };
-        updateDoc(doc(db, 'families', familyId), { members: arrayUnion(me) }).catch(() => {});
+        updateDoc(doc(db, 'families', familyId), { members: arrayUnion(me) })
+          .catch((err) => console.warn('Не успях да се запиша в членовете (публикувани ли са правилата?)', err));
         state.familyMembers.push(me);
       }
     } else {
@@ -384,6 +387,22 @@ async function enterFamily(familyId) {
   if (joined) startListening();
   else { stopListening(); location.hash = ''; }
   route();
+}
+
+// Всички профили с този семеен код — така се виждат и хората,
+// които още не са отворили новата версия на приложението.
+async function loadMembersFromProfiles(familyId) {
+  try {
+    const snap = await getDocs(query(collection(db, 'users'), where('familyId', '==', familyId)));
+    const known = new Set(state.familyMembers.map((m) => m.uid));
+    for (const d of snap.docs) {
+      const email = d.data().email;
+      if (email && !known.has(d.id)) state.familyMembers.push({ uid: d.id, email });
+    }
+    if (state.familyId === familyId) render();
+  } catch (err) {
+    console.warn('Членовете не се заредиха — публикувай новите правила във Firebase.', err);
+  }
 }
 
 async function newFamilyCode() {
@@ -516,6 +535,7 @@ function render() {
   if (!state.familyId) return;
   if (state.list) renderList();
   else renderHome();
+  renderComposerWho();
 }
 
 function listRow({ key, title, icon, color }, count, alert = false) {
@@ -609,7 +629,6 @@ function renderList() {
   $('doneTitle').textContent = `Завършени ${done.length}`;
   $('doneList').replaceChildren(...done.map(taskEl));
 
-  renderComposerWho();
   state.freshIds.clear(); // подсветката на новите задачи е еднократна
 }
 

@@ -9,9 +9,11 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.familyId;
     }
 
-    // всеки вижда и променя само своя профил
+    // всеки променя само своя профил; вижда своя и тези от своето семейство
     match /users/{uid} {
-      allow read, write: if signedIn() && request.auth.uid == uid;
+      allow read: if signedIn()
+        && (request.auth.uid == uid || resource.data.familyId == myFamily());
+      allow write: if signedIn() && request.auth.uid == uid;
     }
 
     // групата се чете по код (за присъединяване), създава се от логнат потребител
