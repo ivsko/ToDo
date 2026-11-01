@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=9" />
+  <link rel="stylesheet" href="styles.css?v=11" />
 </head>
 
 <body>
@@ -54,6 +54,11 @@
             <span id="homeEmail" class="profile-sub"></span>
           </span>
         </button>
+        <button id="chatBtn" class="chat-pill" type="button" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1.1-4.6A8 8 0 1 1 21 12z"/></svg>
+          <span>Чат</span>
+          <span id="chatBadge" class="badge" hidden></span>
+        </button>
         <button id="bellBtn" class="icon-btn" type="button" aria-label="Известия" title="Известия">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10a6 6 0 1 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
         </button>
@@ -94,7 +99,7 @@
     <!-- ЕКРАН НА СПИСЪК -->
     <div id="listView" class="view" hidden>
       <header class="list-head">
-        <button id="backBtn" class="back-btn" type="button">
+        <button id="backBtn" class="back-btn" type="button" data-back="">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
           <span>Списъци</span>
         </button>
@@ -130,6 +135,47 @@
         </div>
       </form>
     </div>
+  </section>
+
+  <!-- СПИСЪК С РАЗГОВОРИ -->
+  <section id="chatsView" class="app view" hidden>
+    <header class="list-head">
+      <button class="back-btn" type="button" data-back="">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+        <span>Списъци</span>
+      </button>
+      <h1 class="list-title">Чат</h1>
+      <p class="list-sub">Общ разговор на семейството и лични разговори</p>
+    </header>
+    <ul id="chatList" class="list-group chat-list"></ul>
+  </section>
+
+  <!-- РАЗГОВОР -->
+  <section id="chatView" class="app view chat-view" hidden>
+    <header class="chat-head">
+      <button class="back-btn" type="button" data-back="#/chats">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+        <span>Чат</span>
+      </button>
+      <div class="chat-title">
+        <span id="chatAvatar"></span>
+        <div>
+          <h1 id="chatTitle"></h1>
+          <p id="chatSub"></p>
+        </div>
+      </div>
+    </header>
+
+    <div id="messages" class="messages" aria-live="polite"></div>
+
+    <form id="chatForm" class="composer chat-composer">
+      <div class="composer-row">
+        <textarea id="chatInput" rows="1" placeholder="Съобщение" aria-label="Съобщение"></textarea>
+        <button id="chatSend" class="send-btn" type="submit" aria-label="Изпрати" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+        </button>
+      </div>
+    </form>
   </section>
 
   <!-- ДЕТАЙЛИ НА ЗАДАЧА -->
@@ -214,6 +260,6 @@
 
   <div id="toasts" class="toasts" aria-live="polite"></div>
 
-  <script type="module" src="app.js?v=9"></script>
+  <script type="module" src="app.js?v=11"></script>
 </body>
 </html>

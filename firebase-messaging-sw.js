@@ -1,10 +1,10 @@
 // Service worker: офлайн старт на приложението и отваряне при клик на известие.
-const CACHE = 'zaedno-v9';
+const CACHE = 'zaedno-v11';
 const SHELL = [
   './',
   './index.html',
-  './styles.css?v=9',
-  './app.js?v=9',
+  './styles.css?v=11',
+  './app.js?v=11',
   './firebase.js',
   './manifest.json',
   './icons/icon-192.png',

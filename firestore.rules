@@ -48,5 +48,28 @@ service cloud.firestore {
         );
       allow create: if signedIn() && request.resource.data.familyId == myFamily();
     }
+
+    // ЧАТ: общият чат (fam_<код>) е за цялото семейство,
+    // личният (dm_…) — само за двамата в него
+    match /chats/{chatId} {
+      function canSee(c) {
+        return c.familyId == myFamily() && (c.type == 'family' || request.auth.uid in c.members);
+      }
+
+      allow get: if signedIn() && (resource == null || canSee(resource.data));
+      allow create, update: if signedIn()
+        && canSee(request.resource.data)
+        && (resource == null || canSee(resource.data))
+        && (request.resource.data.type != 'family' || chatId == 'fam_' + myFamily());
+
+      match /messages/{msgId} {
+        function chat() {
+          return get(/databases/$(database)/documents/chats/$(chatId)).data;
+        }
+        allow read: if signedIn() && canSee(chat());
+        allow create: if signedIn() && canSee(chat()) && request.resource.data.from == request.auth.uid;
+        allow delete: if signedIn() && resource.data.from == request.auth.uid;
+      }
+    }
   }
 }
