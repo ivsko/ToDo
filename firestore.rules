@@ -19,6 +19,9 @@ service cloud.firestore {
       allow get: if signedIn();
       allow create: if signedIn() && request.resource.data.createdBy == request.auth.uid;
       allow update, delete: if signedIn() && resource.data.createdBy == request.auth.uid;
+      // всеки, който се присъедини, може да се добави в списъка с членове
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members']);
     }
 
     // задачите са видими само за членовете на същото семейство
