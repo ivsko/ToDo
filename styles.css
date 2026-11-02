@@ -483,85 +483,57 @@ input[role="switch"]::after {
 input[role="switch"]:checked { background: var(--ok); }
 input[role="switch"]:checked::after { transform: translateX(20px); }
 
-/* ---------- Чат ---------- */
-.chat-pill {
-  position: relative;
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 9px 14px;
-  border: 0; border-radius: 999px;
-  background: var(--surface); box-shadow: var(--shadow);
-  color: var(--primary); font-weight: 600;
+/* ---------- Напомняне ---------- */
+.remind-btn {
+  width: 40px; height: 40px; flex: none;
+  display: grid; place-items: center;
+  border: 0; border-radius: 12px;
+  background: transparent; color: var(--muted);
 }
-.chat-pill svg { width: 19px; height: 19px; }
-.badge {
-  min-width: 20px; height: 20px; padding: 0 6px;
-  border-radius: 999px;
-  background: var(--danger); color: #fff;
-  font-size: .72rem; font-weight: 700;
-  display: inline-grid; place-items: center;
+.remind-btn svg { width: 21px; height: 21px; }
+.remind-btn.on { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.remind-btn.on svg { fill: currentColor; }
+.composer-remind { display: none; }
+.composer.open.remind-open .composer-remind {
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  padding: 0 2px 8px;
 }
+.composer-remind .chip { padding: 6px 10px; font-size: .84rem; }
+.meta-remind { color: var(--primary); font-weight: 500; }
+.meta-remind.past { color: var(--muted); font-weight: 400; }
 
-.chat-list { margin-bottom: 32px; }
-.chat-row { padding: 12px 14px; }
-.chat-row .list-icon, .chat-title .list-icon { width: 40px; height: 40px; border-radius: 50%; }
-.chat-row .list-icon svg, .chat-title .list-icon svg { width: 22px; height: 22px; }
-.list-group li + li .chat-row { box-shadow: inset 68px 1px 0 -67px var(--line); }
-.chat-row-text { flex: 1; min-width: 0; display: grid; }
-.chat-preview {
-  font-size: .87rem; color: var(--muted);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+/* ---------- Коментари ---------- */
+.comment-list {
+  display: grid; gap: 8px;
+  max-height: 260px; overflow-y: auto;
 }
-.chat-row.unread .list-name, .chat-row.unread .chat-preview { font-weight: 600; color: var(--ink); }
-.chat-side { display: grid; justify-items: end; gap: 6px; align-self: flex-start; padding-top: 2px; }
-.chat-time { font-size: .75rem; color: var(--muted); }
-.chat-row.unread .chat-time { color: var(--primary); font-weight: 600; }
-.unread-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--primary); }
-
-.chat-view { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
-.chat-head {
-  position: sticky; top: 0; z-index: 5;
-  background: var(--bg);
-  padding: calc(6px + env(safe-area-inset-top)) 0 10px;
-  border-bottom: 1px solid var(--line);
-  margin: 0 -16px; padding-left: 16px; padding-right: 16px;
-}
-.chat-title { display: flex; align-items: center; gap: 12px; margin-top: 2px; }
-.chat-title h1 { font-size: 1.15rem; font-weight: 700; line-height: 1.2; }
-.chat-title p { font-size: .8rem; color: var(--muted); }
-
-.messages { display: flex; flex-direction: column; gap: 2px; padding: 8px 0 4px; }
-.day-sep {
-  align-self: center;
-  margin: 14px 0 8px;
-  padding: 3px 12px;
-  border-radius: 999px;
+.comment {
+  justify-self: start;
+  max-width: 88%;
+  padding: 8px 12px;
+  border-radius: 14px 14px 14px 4px;
   background: var(--surface-2);
-  font-size: .75rem; color: var(--muted);
 }
-.msg-row { display: flex; align-items: flex-end; gap: 6px; max-width: 82%; }
-.msg-row.first { margin-top: 8px; }
-.msg-row.mine { align-self: flex-end; }
-.msg-avatar, .msg-avatar-space { width: 24px; height: 24px; flex: none; font-size: .65rem; }
-
-.bubble {
-  padding: 7px 12px 6px;
-  border-radius: 18px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
-  min-width: 0;
+.comment.mine {
+  justify-self: end;
+  border-radius: 14px 14px 4px 14px;
+  background: color-mix(in srgb, var(--primary) 14%, var(--surface));
 }
-.msg-row:not(.mine):not(.first) .bubble { border-top-left-radius: 6px; }
-.msg-row:not(.mine):not(.last) .bubble { border-bottom-left-radius: 6px; }
-.msg-row.mine .bubble { background: var(--primary); color: #fff; box-shadow: none; }
-.msg-row.mine:not(.first) .bubble { border-top-right-radius: 6px; }
-.msg-row.mine:not(.last) .bubble { border-bottom-right-radius: 6px; }
-.bubble-who { display: block; font-size: .78rem; font-weight: 600; margin-bottom: 1px; }
-.bubble-text { white-space: pre-wrap; overflow-wrap: anywhere; }
-.bubble-time { float: right; margin: 6px 0 -2px 10px; font-size: .68rem; opacity: .6; }
-
-.chat-composer .composer-row { padding-left: 16px; }
-.chat-composer textarea::placeholder { color: var(--muted); }
-.chat-composer .send-btn { background: var(--primary); }
+.comment-head { display: flex; gap: 8px; align-items: baseline; font-size: .78rem; color: var(--muted); }
+.comment-head b { color: var(--ink); font-weight: 600; }
+.comment-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .95rem; }
+.comment-row {
+  display: flex; align-items: flex-end; gap: 8px;
+  padding: 4px 4px 4px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.comment-row textarea {
+  flex: 1; resize: none; max-height: 120px;
+  border: 0; background: transparent; padding: 8px 0;
+}
+.comment-row textarea:focus { outline: none; }
+.comment-row .send-btn { background: var(--primary); width: 36px; height: 36px; }
 
 /* ---------- Име в профила ---------- */
 .name-row { display: flex; gap: 8px; }

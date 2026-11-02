@@ -54,11 +54,6 @@
             <span id="homeEmail" class="profile-sub"></span>
           </span>
         </button>
-        <button id="chatBtn" class="chat-pill" type="button" hidden>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1.1-4.6A8 8 0 1 1 21 12z"/></svg>
-          <span>Чат</span>
-          <span id="chatBadge" class="badge" hidden></span>
-        </button>
         <button id="bellBtn" class="icon-btn" type="button" aria-label="Известия" title="Известия">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10a6 6 0 1 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
         </button>
@@ -124,58 +119,21 @@
       <form id="composer" class="composer">
         <div class="composer-cats" id="composerCats" role="radiogroup" aria-label="Категория"></div>
         <div class="composer-who" id="composerWho" role="radiogroup" aria-label="За кого е задачата"></div>
+        <div class="composer-remind" id="composerRemind" role="radiogroup" aria-label="Напомняне"></div>
         <div class="composer-row">
           <span class="composer-plus" aria-hidden="true">
             <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
           </span>
           <textarea id="newTodo" rows="1" placeholder="Добави задача" aria-label="Нова задача"></textarea>
+          <button id="remindBtn" class="remind-btn" type="button" aria-label="Напомняне" title="Напомняне" aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10a6 6 0 1 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
+          </button>
           <button id="addTodoBtn" class="send-btn" type="submit" aria-label="Добави">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
           </button>
         </div>
       </form>
     </div>
-  </section>
-
-  <!-- СПИСЪК С РАЗГОВОРИ -->
-  <section id="chatsView" class="app view" hidden>
-    <header class="list-head">
-      <button class="back-btn" type="button" data-back="">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
-        <span>Списъци</span>
-      </button>
-      <h1 class="list-title">Чат</h1>
-      <p class="list-sub">Общ разговор на семейството и лични разговори</p>
-    </header>
-    <ul id="chatList" class="list-group chat-list"></ul>
-  </section>
-
-  <!-- РАЗГОВОР -->
-  <section id="chatView" class="app view chat-view" hidden>
-    <header class="chat-head">
-      <button class="back-btn" type="button" data-back="#/chats">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
-        <span>Чат</span>
-      </button>
-      <div class="chat-title">
-        <span id="chatAvatar"></span>
-        <div>
-          <h1 id="chatTitle"></h1>
-          <p id="chatSub"></p>
-        </div>
-      </div>
-    </header>
-
-    <div id="messages" class="messages" aria-live="polite"></div>
-
-    <form id="chatForm" class="composer chat-composer">
-      <div class="composer-row">
-        <textarea id="chatInput" rows="1" placeholder="Съобщение" aria-label="Съобщение"></textarea>
-        <button id="chatSend" class="send-btn" type="submit" aria-label="Изпрати" disabled>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-        </button>
-      </div>
-    </form>
   </section>
 
   <!-- ДЕТАЙЛИ НА ЗАДАЧА -->
@@ -202,12 +160,29 @@
         <div class="chip-row wrap" id="detailWho"></div>
       </div>
 
+      <div class="detail-group">
+        <p class="detail-label">Напомняне</p>
+        <div class="chip-row wrap" id="detailRemind" role="radiogroup" aria-label="Напомняне"></div>
+        <p id="remindHint" class="muted small"></p>
+      </div>
+
       <button id="detailAccept" type="button" class="btn btn-primary" hidden>Приеми задачата</button>
 
       <a id="calendarLink" class="row-link" target="_blank" rel="noopener" hidden>
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M12 13v5M9.5 15.5h5"/></svg>
         <span>Добави в Google Календар</span>
       </a>
+
+      <div class="detail-group comments">
+        <p class="detail-label">Коментари</p>
+        <div id="commentList" class="comment-list"></div>
+        <div class="comment-row">
+          <textarea id="commentInput" rows="1" placeholder="Напиши коментар" aria-label="Коментар"></textarea>
+          <button id="commentSend" type="button" class="send-btn" aria-label="Изпрати коментара" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          </button>
+        </div>
+      </div>
 
       <p id="detailInfo" class="detail-info"></p>
 

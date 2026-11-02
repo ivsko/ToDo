@@ -14,7 +14,8 @@ import {
   getDoc,
   getDocs,
   arrayUnion,
-  limitToLast,
+  increment,
+  runTransaction,
 } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js';
 
 import {
@@ -40,6 +41,7 @@ const ICONS = {
   tag: '<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
   check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
   chev: '<path d="M9 18l6-6-6-6"/>',
+  bell: '<path d="M6 10a6 6 0 1 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6Z"/><path d="M10 20a2 2 0 0 0 4 0"/>',
   chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1.1-4.6A8 8 0 1 1 21 12z"/>',
   users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1-3.5 3.5-5.5 6.5-5.5s5.5 2 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M17.5 14.7c2 .6 3.4 2.4 4 5.3"/>',
   repeat: '<path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/>',
@@ -291,6 +293,11 @@ function announceChanges(snapshot) {
       toast({ text: `${who} прие задачата`, sub: t.text, email: t.updatedByEmail });
       systemNotify(`${who} прие задачата`, t.text, `todo-${t.id}`);
       buzz([10, 60, 10]);
+    } else if (t.lastAction === 'comment') {
+      if (editing?.id === t.id) continue; // коментарите вече се виждат на екрана
+      toast({ text: `${who} коментира „${t.text}“`, sub: t.lastComment, email: t.updatedByEmail, action: { label: 'Отвори', run: () => openDetail(t) } });
+      systemNotify(`${who} коментира „${t.text}“`, t.lastComment, `todo-${t.id}`);
+      buzz([10, 60, 10]);
     } else if (t.lastAction === 'done') {
       toast({ text: `${who} отметна`, sub: t.text, email: t.updatedByEmail });
       systemNotify(`${who} отметна задача`, t.text, `todo-${t.id}`);
@@ -343,9 +350,6 @@ onAuthStateChanged(auth, async (user) => {
 
   if (!user) {
     stopListening();
-    stopChats();
-    $('chatsView').hidden = true;
-    $('chatView').hidden = true;
     $('auth-section').hidden = false;
     $('todo-section').hidden = true;
     return;
@@ -367,7 +371,6 @@ onAuthStateChanged(auth, async (user) => {
 /* ================= Семейство ================= */
 
 async function enterFamily(familyId) {
-  stopChats();
   state.familyId = familyId;
   state.familyName = '';
   state.familyMembers = [];
@@ -394,7 +397,6 @@ async function enterFamily(familyId) {
   $('familyNotJoined').hidden = joined;
   $('homeLists').hidden = !joined;
   $('leaveFamilyBtn').hidden = !joined;
-  $('chatBtn').hidden = !joined;
   $('codeBox').hidden = !joined;
   $('membersBox').hidden = !joined;
   $('familyName').textContent = joined ? state.familyName || 'Семейство' : 'Добре дошъл';
@@ -511,6 +513,8 @@ function startListening() {
     state.firstSnapshot = false;
     state.todos = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
     render();
+    scheduleReminders();
+    checkReminders();
   }, (err) => {
     console.error(err);
     toast({ text: 'Задачите не се заредиха', sub: 'Провери връзката или правилата във Firebase.', duration: 6000 });
@@ -524,24 +528,12 @@ function route() {
   const h = location.hash;
   const joined = Boolean(state.familyId);
   const mList = h.match(/^#\/list\/(\w+)/);
-  const mChat = h.match(/^#\/chat\/([\w-]+)/);
 
   state.list = mList && joined ? listByKey(mList[1]) : null;
-  state.view = !joined ? 'home'
-    : state.list ? 'list'
-    : mChat ? 'chat'
-    : h === '#/chats' ? 'chats'
-    : 'home';
+  state.view = state.list ? 'list' : 'home';
 
-  const loggedIn = Boolean(state.user);
-  $('todo-section').hidden = !loggedIn || state.view === 'chats' || state.view === 'chat';
   $('homeView').hidden = state.view !== 'home';
   $('listView').hidden = state.view !== 'list';
-  $('chatsView').hidden = !loggedIn || state.view !== 'chats';
-  $('chatView').hidden = !loggedIn || state.view !== 'chat';
-
-  if (state.view === 'chat') openChat(mChat[1]);
-  else closeChat();
 
   state.newAssignee = state.list?.key === 'mine' ? state.user?.uid ?? null : null;
   if (state.list) {
@@ -552,7 +544,7 @@ function route() {
     document.documentElement.style.removeProperty('--accent');
   }
   render();
-  if (state.view !== 'chat') window.scrollTo(0, 0);
+  window.scrollTo(0, 0);
 }
 
 window.addEventListener('hashchange', route);
@@ -578,12 +570,9 @@ function openList(key) {
 
 function render() {
   if (!state.familyId) return;
-  ensureChatListeners();
   if (state.view === 'list') renderList();
-  else if (state.view === 'chats') renderChats();
   else if (state.view === 'home') renderHome();
   renderComposerWho();
-  updateChatBadge();
 }
 
 function listRow({ key, title, icon, color }, count, alert = false) {
@@ -748,7 +737,7 @@ function taskEl(t) {
   // кой е сложил задачата — винаги първо
   const from = document.createElement('span');
   from.className = 'meta meta-from';
-  from.append(avatarEl(t.createdByEmail, 'avatar-sm'), `от ${nameOf(t.createdByEmail, { me: 'теб' })}`);
+  from.textContent = `от ${nameOf(t.createdByEmail, { me: 'теб' })}`;
   meta.append(from);
 
   if (inSmart) {
@@ -779,8 +768,22 @@ function taskEl(t) {
       a.classList.add('meta-ok');
       label = mine ? 'ти я прие' : `${nameOf(email)} я прие`;
     }
-    a.append('→ ', avatarEl(email, 'avatar-sm'), label);
+    a.textContent = `→ ${label}`;
     meta.append(a);
+  }
+  if (t.remindAt && !t.done) {
+    const r = document.createElement('span');
+    r.className = t.remindAt < Date.now() ? 'meta meta-remind past' : 'meta meta-remind';
+    r.innerHTML = svg('bell');
+    r.append(remindLabel(t.remindAt));
+    meta.append(r);
+  }
+  if (t.commentCount > 0) {
+    const c = document.createElement('span');
+    c.className = 'meta';
+    c.innerHTML = svg('chat');
+    c.append(String(t.commentCount));
+    meta.append(c);
   }
   if (t.done && t.doneByEmail && t.doneByEmail !== state.user.email) {
     const w = document.createElement('span');
@@ -840,6 +843,9 @@ function explainError(err, t, action) {
     }
     if (assigneeEmail && t.assignee !== state.user.uid && action === 'accept') {
       return toast({ text: `Нямаш право да я приемеш`, sub: `Само ${assigneeName} може да приеме тази задача.`, email: assigneeEmail, duration: 6000 });
+    }
+    if (action === 'comment') {
+      return toast({ text: 'Нямаш право да коментираш тук', sub: 'Публикувай новите правила във Firebase или провери дали още си в семейството.', duration: 6000 });
     }
     if (action === 'delete') {
       return toast({ text: 'Нямаш право да изтриеш тази задача', sub: 'Тя е на друго семейство или си излязъл от групата.', duration: 6000 });
@@ -986,6 +992,25 @@ function setNewAssignee(uid) {
   renderComposerWho();
 }
 
+// „Напомни:“ при добавяне — по желание
+state.newRemind = null;
+
+function setNewRemind(ms) {
+  state.newRemind = ms;
+  $('remindBtn').classList.toggle('on', Boolean(ms));
+  $('remindBtn').setAttribute('aria-pressed', String(Boolean(ms)));
+  if (!ms && !$('composerRemind').dataset.keep) composer.classList.remove('remind-open');
+  renderRemindPicker($('composerRemind'), state.newRemind, setNewRemind, 'Напомни:');
+}
+
+$('remindBtn').addEventListener('mousedown', (e) => e.preventDefault());
+$('remindBtn').addEventListener('click', () => {
+  composer.classList.add('open');
+  composer.classList.toggle('remind-open');
+  renderRemindPicker($('composerRemind'), state.newRemind, setNewRemind, 'Напомни:');
+  input.focus();
+});
+
 const input = $('newTodo');
 const composer = $('composer');
 
@@ -1029,6 +1054,7 @@ composer.addEventListener('submit', async (e) => {
   };
   if (list?.key === 'today' || list?.key === 'planned') todo.due = today();
   if (list?.key === 'important') todo.important = true;
+  if (state.newRemind && state.newRemind > Date.now()) todo.remindAt = state.newRemind;
   const assignee = state.newAssignee || (list?.key === 'mine' ? state.user.uid : null);
   if (assignee) {
     todo.assignee = assignee;
@@ -1040,6 +1066,7 @@ composer.addEventListener('submit', async (e) => {
   autosize(input);
   syncAddBtn();
   buzz();
+  setNewRemind(null);
   if (assignee && assignee !== state.user.uid) {
     toast({ text: `Възложено на ${nameOf(emailOfUid(assignee))}`, sub: text, email: emailOfUid(assignee) });
   }
@@ -1075,9 +1102,12 @@ function openDetail(t) {
     important: Boolean(t.important),
     done: Boolean(t.done),
     accepted: Boolean(t.accepted),
+    remindAt: t.remindAt || null,
   };
   $('detailText').value = t.text;
+  $('commentInput').value = '';
   renderDetail();
+  openComments(t);
   detail.returnValue = '';
   detail.showModal();
   autosize($('detailText'));
@@ -1137,6 +1167,10 @@ function renderDetail() {
   });
   $('detailWho').replaceChildren(nobody, ...people);
 
+  // напомняне
+  renderRemindPicker($('detailRemind'), draft.remindAt, (ms) => { draft.remindAt = ms; renderDetail(); });
+  $('remindHint').textContent = remindHint(draft.assignee);
+
   // Google Календар (целодневно събитие)
   const cal = $('calendarLink');
   cal.hidden = !draft.due;
@@ -1176,6 +1210,7 @@ $('detailText').addEventListener('input', (e) => autosize(e.target));
 detail.addEventListener('close', () => {
   const t = editing;
   editing = null;
+  closeComments();
   if (!t || detail.returnValue === 'deleted') return;
 
   const text = $('detailText').value.trim() || t.text;
@@ -1184,6 +1219,7 @@ detail.addEventListener('close', () => {
   if (draft.category !== t.category) changes.category = draft.category;
   if ((draft.due || null) !== (t.due || null)) changes.due = draft.due;
   if (draft.important !== Boolean(t.important)) changes.important = draft.important;
+  if ((draft.remindAt || null) !== (t.remindAt || null)) changes.remindAt = draft.remindAt;
   const assigneeChanged = (draft.assignee || null) !== (t.assignee || null);
   if (assigneeChanged) {
     changes.assignee = draft.assignee;
@@ -1206,7 +1242,7 @@ detail.addEventListener('close', () => {
   if (!Object.keys(changes).length) return;
 
   const action = assigneeChanged && draft.assignee && draft.assignee !== state.user.uid ? 'assign'
-    : changes.text || changes.category || 'due' in changes ? 'edit'
+    : changes.text || changes.category || 'due' in changes || 'remindAt' in changes ? 'edit'
     : 'done' in changes ? (draft.done ? 'done' : 'undone')
     : changes.accepted ? 'accept'
     : 'edit';
@@ -1218,6 +1254,243 @@ $('deleteTodoBtn').addEventListener('click', () => {
   detail.close('deleted');
   if (t) removeTodo(t);
 });
+
+
+/* ================= Напомняния ================= */
+
+// Напомнянето се праща през ntfy с „отложена доставка“ — ntfy.sh го пази
+// и го изпраща в точния час, дори всички телефони да са затворени.
+// ntfy.sh приема до 3 дни напред, затова по-далечните се насрочват,
+// когато някой отвори приложението в последните 3 дни преди часа.
+const NTFY_MAX_AHEAD = 70 * 60 * 60_000; // малко под 3 дни
+
+const at = (dayOffset, h, m = 0) => {
+  const d = new Date();
+  d.setDate(d.getDate() + dayOffset);
+  d.setHours(h, m, 0, 0);
+  return d.getTime();
+};
+
+function remindLabel(ms) {
+  const d = new Date(ms);
+  const time = timeFmt.format(d);
+  const day = isoDay(d);
+  if (day === today()) return `днес ${time}`;
+  if (day === addDays(1)) return `утре ${time}`;
+  if (day === addDays(-1)) return `вчера ${time}`;
+  return `${weekdayFmt.format(d)} ${time}`;
+}
+
+// на кого отива напомнянето: на човека, на когото е задачата, иначе на всички
+const remindRecipients = (t) => (t.assignee ? [t.assignee] : members().map((m) => m.uid));
+
+function remindHint(assignee) {
+  if (assignee) return `Ще получи ${nameOf(emailOfUid(assignee), { me: 'ти' })}.`;
+  return 'Ще получат всички в семейството.';
+}
+
+function renderRemindPicker(box, value, onPick, label = '') {
+  const now = Date.now();
+  const opts = [
+    ['Без', null],
+    ['След 1 час', now + 60 * 60_000],
+  ];
+  if (now < at(0, 18, 30)) opts.push(['Днес 19:00', at(0, 19)]);
+  opts.push(['Утре 9:00', at(1, 9)]);
+
+  const close = (a, b) => a && b && Math.abs(a - b) < 60_000;
+  const chips = [];
+  if (label) {
+    const l = document.createElement('span');
+    l.className = 'who-label';
+    l.textContent = label;
+    chips.push(l);
+  }
+  for (const [text, ms] of opts) {
+    const checked = ms === null ? !value
+      : text === 'След 1 час' ? Boolean(value) && value === state.lastHour
+      : close(ms, value);
+    const b = chip({ label: text, color: 'var(--primary)', checked, dot: false });
+    b.onclick = () => {
+      // „След 1 час“ се смята в момента на натискане
+      const v = text === 'След 1 час' ? Date.now() + 60 * 60_000 : ms;
+      if (text === 'След 1 час') state.lastHour = v;
+      onPick(v);
+    };
+    chips.push(b);
+  }
+  const custom = value && !chips.some((c) => c.getAttribute?.('aria-checked') === 'true');
+  const pick = chip({ label: custom ? remindLabel(value) : 'Друг час…', color: 'var(--primary)', checked: Boolean(custom), html: svg('bell') });
+  pick.classList.add('chip-date');
+  const inp = document.createElement('input');
+  inp.type = 'datetime-local';
+  inp.setAttribute('aria-label', 'Избери ден и час за напомняне');
+  const base = new Date(value || at(1, 9));
+  inp.value = `${isoDay(base)}T${pad(base.getHours())}:${pad(base.getMinutes())}`;
+  inp.onchange = () => {
+    if (!inp.value) return;
+    const ms = new Date(inp.value).getTime();
+    if (ms <= Date.now()) return toast({ text: 'Часът вече е минал', sub: 'Избери час в бъдещето.' });
+    onPick(ms);
+  };
+  pick.append(inp);
+  chips.push(pick);
+  box.replaceChildren(...chips);
+}
+
+async function sendReminder(t, recipients) {
+  if (Date.now() - state.pushLoadedAt > 5 * 60_000) await loadMembersFromProfiles(state.familyId);
+  const topics = [...new Set(recipients)].map((uid) => state.pushTopics.get(uid)).filter(Boolean);
+  await Promise.all(topics.map((topic) => sendNtfy(topic, {
+    title: '⏰ Напомняне',
+    message: t.text,
+    path: t.assignee ? '#/list/mine' : '#/list/all',
+    at: t.remindAt,
+  })));
+}
+
+// всеки отворен телефон проверява дали има напомняния за насрочване;
+// транзакцията гарантира, че само един ще го насрочи
+let scheduling = false;
+async function scheduleReminders() {
+  if (scheduling || !state.familyId) return;
+  scheduling = true;
+  try {
+    const now = Date.now();
+    const due = state.todos.filter((t) => !t.done && t.remindAt
+      && t.remindScheduled !== t.remindAt
+      && t.remindAt > now - 10 * 60_000
+      && t.remindAt - now <= NTFY_MAX_AHEAD);
+
+    for (const t of due) {
+      const ref = doc(db, 'todos', t.id);
+      const claimed = await runTransaction(db, async (tx) => {
+        const snap = await tx.get(ref);
+        const d = snap.data();
+        if (!snap.exists() || d.done || !d.remindAt || d.remindScheduled === d.remindAt) return null;
+        tx.update(ref, { remindScheduled: d.remindAt, lastAction: 'system' });
+        return { id: snap.id, ...d };
+      }).catch((err) => { console.warn('Напомнянето не беше насрочено', err); return null; });
+      if (claimed) await sendReminder(claimed, remindRecipients(claimed)).catch((err) => console.warn(err));
+    }
+  } finally {
+    scheduling = false;
+  }
+}
+
+// докато приложението е отворено — и съобщение на екрана
+const shownReminders = new Set();
+function checkReminders() {
+  if (!state.user) return;
+  const now = Date.now();
+  for (const t of state.todos) {
+    if (t.done || !t.remindAt || t.remindAt > now || now - t.remindAt > 3 * 60_000) continue;
+    if (!remindRecipients(t).includes(state.user.uid) || shownReminders.has(`${t.id}:${t.remindAt}`)) continue;
+    shownReminders.add(`${t.id}:${t.remindAt}`);
+    toast({ text: '⏰ Напомняне', sub: t.text, duration: 8000, action: { label: 'Отвори', run: () => openDetail(t) } });
+    systemNotify('⏰ Напомняне', t.text, `remind-${t.id}`);
+    buzz([20, 80, 20, 80, 20]);
+  }
+}
+setInterval(checkReminders, 20_000);
+setInterval(scheduleReminders, 10 * 60_000); // далечните влизат в 3-дневния прозорец
+
+/* ================= Коментари към задача ================= */
+
+// todos/<задача>/comments/<коментар>
+let commentsUnsub = null;
+let comments = [];
+
+function openComments(t) {
+  closeComments();
+  comments = [];
+  renderComments();
+  const q = query(collection(db, 'todos', t.id, 'comments'), orderBy('created'));
+  commentsUnsub = onSnapshot(q, (snap) => {
+    comments = snap.docs.map((d) => ({ id: d.id, ...d.data(), pending: d.metadata.hasPendingWrites }));
+    renderComments();
+  }, (err) => {
+    console.warn(err);
+    if (err?.code === 'permission-denied') {
+      $('commentList').textContent = 'Коментарите не се зареждат — публикувай новите правила във Firebase.';
+    }
+  });
+}
+
+function closeComments() {
+  if (commentsUnsub) commentsUnsub();
+  commentsUnsub = null;
+}
+
+function renderComments() {
+  const box = $('commentList');
+  if (!comments.length) {
+    const p = document.createElement('p');
+    p.className = 'muted small';
+    p.textContent = 'Още няма коментари. Напиши въпрос или уточнение.';
+    box.replaceChildren(p);
+    return;
+  }
+  box.replaceChildren(...comments.map((c) => {
+    const row = document.createElement('div');
+    row.className = c.from === state.user.uid ? 'comment mine' : 'comment';
+    const head = document.createElement('p');
+    head.className = 'comment-head';
+    const who = document.createElement('b');
+    who.textContent = nameOf(c.fromEmail, { me: 'Ти' });
+    const when = document.createElement('span');
+    when.textContent = c.pending ? 'изпраща се…' : relTime(c.created);
+    head.append(who, when);
+    const text = document.createElement('p');
+    text.className = 'comment-text';
+    text.textContent = c.text; // никакъв HTML от потребителите
+    row.append(head, text);
+    return row;
+  }));
+  box.scrollTop = box.scrollHeight;
+}
+
+async function sendComment() {
+  const t = editing;
+  const inp = $('commentInput');
+  const text = inp.value.trim();
+  if (!t || !text) return;
+  inp.value = '';
+  autosize(inp);
+  $('commentSend').disabled = true;
+  try {
+    await addDoc(collection(db, 'todos', t.id, 'comments'), {
+      text, from: state.user.uid, fromEmail: state.user.email, created: Date.now(),
+    });
+    await updateDoc(doc(db, 'todos', t.id), {
+      commentCount: increment(1),
+      lastComment: text.slice(0, 140),
+      ...changeMeta('comment'),
+    });
+    // известие до хората, свързани със задачата
+    pushTo([t.assignee, t.createdBy, t.assignedBy], {
+      title: `${myName()} коментира „${t.text.slice(0, 40)}“`,
+      message: text,
+      path: '#/list/all',
+    });
+  } catch (err) {
+    inp.value = text;
+    $('commentSend').disabled = false;
+    explainError(err, t, 'comment');
+  }
+}
+
+$('commentInput').addEventListener('input', (e) => {
+  autosize(e.target);
+  $('commentSend').disabled = !e.target.value.trim();
+});
+$('commentInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+    e.preventDefault(); // Enter праща коментара, не затваря листа
+    sendComment();
+  }
+});
+$('commentSend').addEventListener('click', sendComment);
 
 /* ================= Меню ================= */
 
@@ -1312,18 +1585,18 @@ function newTopic() {
   return 'semeini-' + [...bytes].map((b) => b.toString(36).padStart(2, '0')).join('').slice(0, 20);
 }
 
-async function sendNtfy(topic, { title, message, path = '' }) {
+async function sendNtfy(topic, { title, message, path = '', at = null }) {
+  const body = {
+    topic,
+    title,
+    message: String(message).slice(0, 300),
+    click: `${location.origin}${location.pathname}${path}`,
+    tags: ['memo'],
+  };
+  // отложена доставка: ntfy го изпраща в точния час (минимум 10 сек напред)
+  if (at && at - Date.now() > 15_000) body.delay = String(Math.floor(at / 1000));
   // без Content-Type — браузърът не прави допълнителна CORS проверка
-  const res = await fetch('https://ntfy.sh/', {
-    method: 'POST',
-    body: JSON.stringify({
-      topic,
-      title,
-      message: String(message).slice(0, 300),
-      click: `${location.origin}${location.pathname}${path}`,
-      tags: ['memo'],
-    }),
-  });
+  const res = await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify(body) });
   if (!res.ok) throw new Error(`ntfy ${res.status}`);
 }
 
@@ -1379,343 +1652,6 @@ $('testPushBtn').addEventListener('click', async () => {
     console.warn(err);
     toast({ text: 'Известието не беше изпратено', sub: 'Провери интернет връзката.' });
   }
-});
-
-/* ================= Чат: общ и лични разговори ================= */
-
-// chats/fam_<семейство>                — общият чат
-// chats/dm_<семейство>_<uid1>_<uid2>   — личен разговор между двама
-// chats/<id>/messages/<id>             — съобщенията
-const famChatId = () => `fam_${state.familyId}`;
-const dmChatId = (uid) => `dm_${state.familyId}_${[state.user.uid, uid].sort().join('_')}`;
-
-state.chats = new Map();      // chatId → последните данни (или null)
-state.chatSubs = new Map();   // chatId → функция за спиране
-state.openChat = null;
-state.messages = [];
-state.msgUnsub = null;
-state.scrollChat = false;
-const drafts = new Map();     // незавършен текст за всеки разговор
-
-const readMap = (() => { try { return JSON.parse(store.get('chatRead', '{}')) || {}; } catch { return {}; } })();
-
-function markRead(id) {
-  readMap[id] = Date.now();
-  store.set('chatRead', JSON.stringify(readMap));
-  updateChatBadge();
-}
-
-function isUnread(id) {
-  const c = state.chats.get(id);
-  return Boolean(c?.lastAt && c.lastFrom !== state.user?.uid && c.lastAt > (readMap[id] || 0));
-}
-
-function chatEntries() {
-  if (!state.familyId || !state.user) return [];
-  const list = [{ key: 'fam', id: famChatId(), title: 'Семеен чат', family: true }];
-  for (const m of members()) {
-    if (m.uid !== state.user.uid) list.push({ key: m.uid, id: dmChatId(m.uid), title: nameOf(m.email), email: m.email });
-  }
-  return list;
-}
-
-// слушаме „последното съобщение“ на всеки разговор — за брояча и известията
-function ensureChatListeners() {
-  for (const c of chatEntries()) {
-    if (state.chatSubs.has(c.id)) continue;
-    let first = true;
-    const unsub = onSnapshot(doc(db, 'chats', c.id), (snap) => {
-      const prev = state.chats.get(c.id);
-      const data = snap.exists() ? snap.data() : null;
-      state.chats.set(c.id, data);
-      if (!first && data?.lastAt && data.lastAt !== prev?.lastAt && data.lastFrom !== state.user.uid) announceMessage(c, data);
-      first = false;
-      updateChatBadge();
-      if (state.view === 'chats') renderChats();
-    }, (err) => console.warn('Чатът не се зареди (публикувани ли са правилата?)', c.id, err));
-    state.chatSubs.set(c.id, unsub);
-  }
-}
-
-function stopChats() {
-  for (const unsub of state.chatSubs.values()) unsub();
-  state.chatSubs.clear();
-  state.chats.clear();
-  closeChat();
-}
-
-function announceMessage(c, data) {
-  if (state.openChat?.id === c.id && document.visibilityState === 'visible') return;
-  const who = nameOf(data.lastFromEmail);
-  toast({
-    text: c.family ? `${who} в семейния чат` : `${who} ти писа`,
-    sub: data.lastText,
-    email: data.lastFromEmail,
-    action: { label: 'Отвори', run: () => go(`#/chat/${c.key}`) },
-    duration: 5000,
-  });
-  systemNotify(c.family ? `${who} в семейния чат` : `${who} ти писа`, data.lastText, `chat-${c.id}`);
-  buzz([10, 60, 10]);
-}
-
-function updateChatBadge() {
-  const n = chatEntries().filter((c) => isUnread(c.id)).length;
-  $('chatBadge').hidden = !n;
-  $('chatBadge').textContent = n;
-}
-
-function shortTime(ms) {
-  if (!ms) return '';
-  const d = new Date(ms);
-  if (isoDay(d) === today()) return timeFmt.format(d);
-  if (isoDay(d) === addDays(-1)) return 'вчера';
-  return dayFmt.format(d);
-}
-
-/* ---------- списък с разговори ---------- */
-
-function renderChats() {
-  const me = state.user.uid;
-  $('chatList').replaceChildren(...chatEntries().map((c) => {
-    const data = state.chats.get(c.id);
-    const li = document.createElement('li');
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'list-row chat-row';
-    btn.classList.toggle('unread', isUnread(c.id));
-
-    if (c.family) {
-      btn.style.setProperty('--c', 'var(--primary)');
-      btn.insertAdjacentHTML('beforeend', `<span class="list-icon chat-icon">${svg('users')}</span>`);
-    } else {
-      btn.append(avatarEl(c.email, 'avatar-md'));
-    }
-
-    const text = document.createElement('span');
-    text.className = 'chat-row-text';
-    const name = document.createElement('span');
-    name.className = 'list-name';
-    name.textContent = c.title;
-    const preview = document.createElement('span');
-    preview.className = 'chat-preview';
-    if (data?.lastText) {
-      const prefix = data.lastFrom === me ? 'Ти: ' : c.family ? `${nameOf(data.lastFromEmail)}: ` : '';
-      preview.textContent = prefix + data.lastText;
-    } else {
-      preview.textContent = c.family ? 'Пиши на цялото семейство' : 'Започни разговор';
-    }
-    text.append(name, preview);
-
-    const side = document.createElement('span');
-    side.className = 'chat-side';
-    const time = document.createElement('span');
-    time.className = 'chat-time';
-    time.textContent = shortTime(data?.lastAt);
-    side.append(time);
-    if (isUnread(c.id)) {
-      const dot = document.createElement('span');
-      dot.className = 'unread-dot';
-      side.append(dot);
-    }
-
-    btn.append(text, side);
-    btn.onclick = () => go(`#/chat/${c.key}`);
-    li.append(btn);
-    return li;
-  }));
-}
-
-/* ---------- разговор ---------- */
-
-function chatErrorToast(err) {
-  console.error(err);
-  if (err?.code === 'permission-denied') {
-    toast({ text: 'Нямаш достъп до този чат', sub: 'Провери дали новите правила са публикувани във Firebase.', duration: 6000 });
-  } else if (err?.code === 'unavailable' || !navigator.onLine) {
-    toast({ text: 'Няма връзка с интернет', sub: 'Съобщението не е изпратено.', duration: 5000 });
-  } else {
-    toast({ text: 'Съобщението не беше изпратено', sub: `Неочаквана грешка (${err?.code || 'без код'}).`, duration: 5000 });
-  }
-}
-
-async function openChat(key) {
-  const entry = chatEntries().find((c) => c.key === key);
-  if (!entry) { location.hash = '#/chats'; return; }
-  if (state.openChat?.id === entry.id) return;
-  closeChat();
-  state.openChat = entry;
-  state.scrollChat = true;
-  chatInput.value = drafts.get(entry.id) || '';
-  autosize(chatInput);
-  $('chatSend').disabled = !chatInput.value.trim();
-
-  $('chatTitle').textContent = entry.title;
-  $('chatSub').textContent = entry.family ? `${members().length} души` : 'Личен разговор';
-  const av = $('chatAvatar');
-  av.replaceChildren();
-  if (entry.family) {
-    av.innerHTML = `<span class="list-icon chat-icon" style="--c: var(--primary)">${svg('users')}</span>`;
-  } else {
-    av.append(avatarEl(entry.email, 'avatar-md'));
-  }
-  renderMessages();
-
-  try {
-    const data = { familyId: state.familyId, type: entry.family ? 'family' : 'dm' };
-    if (!entry.family) data.members = [state.user.uid, entry.key].sort();
-    await setDoc(doc(db, 'chats', entry.id), data, { merge: true });
-  } catch (err) {
-    chatErrorToast(err);
-    return;
-  }
-  if (state.openChat?.id !== entry.id) return;
-
-  const q = query(collection(db, 'chats', entry.id, 'messages'), orderBy('created'), limitToLast(300));
-  state.msgUnsub = onSnapshot(q, (snap) => {
-    state.messages = snap.docs.map((d) => ({ id: d.id, ...d.data(), pending: d.metadata.hasPendingWrites }));
-    renderMessages();
-    if (document.visibilityState === 'visible') markRead(entry.id);
-  }, chatErrorToast);
-}
-
-function closeChat() {
-  if (state.openChat) drafts.set(state.openChat.id, chatInput.value);
-  if (state.msgUnsub) state.msgUnsub();
-  state.msgUnsub = null;
-  state.openChat = null;
-  state.messages = [];
-}
-
-function dayTitle(day) {
-  if (day === today()) return 'Днес';
-  if (day === addDays(-1)) return 'Вчера';
-  return new Intl.DateTimeFormat('bg-BG', { weekday: 'long', day: 'numeric', month: 'long' }).format(parseDay(day));
-}
-
-function renderMessages() {
-  const box = $('messages');
-  const entry = state.openChat;
-  if (!entry) return;
-  const nearBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 160;
-  const me = state.user.uid;
-  const GAP = 5 * 60_000; // съобщения в рамките на 5 мин се групират
-  const out = [];
-
-  if (!state.messages.length) {
-    const empty = document.createElement('div');
-    empty.className = 'empty';
-    empty.innerHTML = `<div class="empty-icon">${svg('chat')}</div>`;
-    const strong = document.createElement('strong');
-    strong.textContent = 'Още няма съобщения';
-    const p = document.createElement('span');
-    p.textContent = entry.family ? 'Напиши нещо на цялото семейство.' : `Напиши първото съобщение на ${entry.title}.`;
-    empty.append(strong, p);
-    out.push(empty);
-  }
-
-  let lastDay = null;
-  state.messages.forEach((m, i) => {
-    const day = isoDay(new Date(m.created));
-    const prev = state.messages[i - 1];
-    const next = state.messages[i + 1];
-    if (day !== lastDay) {
-      const sep = document.createElement('div');
-      sep.className = 'day-sep';
-      sep.textContent = dayTitle(day);
-      out.push(sep);
-    }
-    const mine = m.from === me;
-    const first = day !== lastDay || !prev || prev.from !== m.from || m.created - prev.created > GAP;
-    const last = !next || next.from !== m.from || next.created - m.created > GAP || isoDay(new Date(next.created)) !== day;
-    lastDay = day;
-
-    const row = document.createElement('div');
-    row.className = 'msg-row';
-    row.classList.toggle('mine', mine);
-    row.classList.toggle('first', first);
-    row.classList.toggle('last', last);
-
-    if (!mine && entry.family) {
-      if (last) row.append(avatarEl(m.fromEmail, 'avatar-sm msg-avatar'));
-      else row.append(Object.assign(document.createElement('span'), { className: 'msg-avatar-space' }));
-    }
-
-    const bubble = document.createElement('div');
-    bubble.className = 'bubble';
-    if (!mine && entry.family && first) {
-      const who = document.createElement('span');
-      who.className = 'bubble-who';
-      who.style.color = colorOf(m.fromEmail);
-      who.textContent = nameOf(m.fromEmail);
-      bubble.append(who);
-    }
-    const text = document.createElement('span');
-    text.className = 'bubble-text';
-    text.textContent = m.text; // никакъв HTML от потребителите
-    const time = document.createElement('span');
-    time.className = 'bubble-time';
-    time.textContent = m.pending ? 'изпраща се…' : timeFmt.format(new Date(m.created));
-    bubble.append(text, time);
-    row.append(bubble);
-    out.push(row);
-  });
-
-  box.replaceChildren(...out);
-  if (state.scrollChat || nearBottom) {
-    state.scrollChat = false;
-    requestAnimationFrame(() => window.scrollTo(0, document.documentElement.scrollHeight));
-  }
-}
-
-const chatInput = $('chatInput');
-
-chatInput.addEventListener('input', () => {
-  autosize(chatInput);
-  $('chatSend').disabled = !chatInput.value.trim();
-});
-chatInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
-    e.preventDefault();
-    $('chatForm').requestSubmit();
-  }
-});
-
-$('chatForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const text = chatInput.value.trim();
-  const entry = state.openChat;
-  if (!text || !entry) return;
-
-  chatInput.value = '';
-  autosize(chatInput);
-  $('chatSend').disabled = true;
-  state.scrollChat = true;
-  chatInput.focus();
-
-  const created = Date.now();
-  try {
-    await Promise.all([
-      addDoc(collection(db, 'chats', entry.id, 'messages'), {
-        text, from: state.user.uid, fromEmail: state.user.email, created,
-      }),
-      updateDoc(doc(db, 'chats', entry.id), {
-        lastText: text.slice(0, 140), lastFrom: state.user.uid, lastFromEmail: state.user.email, lastAt: created,
-      }),
-    ]);
-    markRead(entry.id);
-    if (entry.family) pushTo(otherUids(), { title: `${myName()} в семейния чат`, message: text, path: '#/chat/fam' });
-    else pushTo([entry.key], { title: `${myName()} ти писа`, message: text, path: `#/chat/${state.user.uid}` });
-  } catch (err) {
-    chatInput.value = text;
-    $('chatSend').disabled = false;
-    chatErrorToast(err);
-  }
-});
-
-$('chatBtn').addEventListener('click', () => go('#/chats'));
-
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && state.openChat && state.messages.length) markRead(state.openChat.id);
 });
 
 /* ================= Service worker ================= */
