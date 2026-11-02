@@ -259,12 +259,17 @@ async function systemNotify(title, body, tag) {
 }
 
 // съобщава за промените, направени от другите в семейството
+const announced = new Set(); // да не съобщаваме едно и също два пъти
+
 function announceChanges(snapshot) {
   const me = state.user?.uid;
 
   for (const change of snapshot.docChanges()) {
     if (change.doc.metadata.hasPendingWrites) continue; // наша собствена промяна
     const t = { id: change.doc.id, ...change.doc.data() };
+    const key = `${t.id}:${change.type === 'added' ? 'added' : `${t.updatedAt}:${t.lastAction}`}`;
+    if (announced.has(key)) continue;
+    announced.add(key);
     const cat = catOf(t.category).short;
 
     if (change.type === 'added' && t.createdBy !== me) {
@@ -508,10 +513,10 @@ function startListening() {
     orderBy('created', 'desc'),
   );
 
-  state.unsubscribe = onSnapshot(q, (snapshot) => {
+  state.unsubscribe = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
     if (!state.firstSnapshot) announceChanges(snapshot);
     state.firstSnapshot = false;
-    state.todos = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+    state.todos = snapshot.docs.map((d) => ({ id: d.id, ...d.data(), pending: d.metadata.hasPendingWrites }));
     render();
     scheduleReminders();
     checkReminders();
@@ -1169,7 +1174,7 @@ function renderDetail() {
 
   // напомняне
   renderRemindPicker($('detailRemind'), draft.remindAt, (ms) => { draft.remindAt = ms; renderDetail(); });
-  $('remindHint').textContent = remindHint(draft.assignee);
+  $('remindHint').textContent = draft.remindAt ? remindHint(draft.assignee, editing) : '';
 
   // Google Календар (целодневно събитие)
   const cal = $('calendarLink');
@@ -1284,9 +1289,22 @@ function remindLabel(ms) {
 // на кого отива напомнянето: на човека, на когото е задачата, иначе на всички
 const remindRecipients = (t) => (t.assignee ? [t.assignee] : members().map((m) => m.uid));
 
-function remindHint(assignee) {
-  if (assignee) return `Ще получи ${nameOf(emailOfUid(assignee), { me: 'ти' })}.`;
-  return 'Ще получат всички в семейството.';
+function remindHint(assignee, t = null) {
+  const uids = assignee ? [assignee] : members().map((m) => m.uid);
+  const who = assignee ? `Ще получи ${nameOf(emailOfUid(assignee), { me: 'ти' })}.` : 'Ще получат всички в семейството.';
+  const without = uids.filter((uid) => !state.pushTopics.has(uid));
+  let warn = '';
+  if (without.includes(state.user.uid)) {
+    warn = ' ⚠ Нямаш включени „Известия при затворено приложение“ (менюто горе) — ще го видиш само ако приложението е отворено.';
+  } else if (without.length) {
+    warn = ` ⚠ ${without.map((u) => nameOf(emailOfUid(u))).join(', ')} няма включени известия при затворено приложение.`;
+  }
+  let status = '';
+  if (t?.remindAt && t.remindAt === draft?.remindAt) {
+    if (t.remindScheduled === t.remindAt) status = ' ✓ Насрочено.';
+    else if (t.remindAt - Date.now() > NTFY_MAX_AHEAD) status = ' Ще се насрочи 3 дни преди часа.';
+  }
+  return who + status + warn;
 }
 
 function renderRemindPicker(box, value, onPick, label = '') {
@@ -1341,23 +1359,27 @@ function renderRemindPicker(box, value, onPick, label = '') {
 async function sendReminder(t, recipients) {
   if (Date.now() - state.pushLoadedAt > 5 * 60_000) await loadMembersFromProfiles(state.familyId);
   const topics = [...new Set(recipients)].map((uid) => state.pushTopics.get(uid)).filter(Boolean);
+  if (!topics.length) return 0;
   await Promise.all(topics.map((topic) => sendNtfy(topic, {
     title: '⏰ Напомняне',
     message: t.text,
     path: t.assignee ? '#/list/mine' : '#/list/all',
     at: t.remindAt,
   })));
+  return topics.length;
 }
 
 // всеки отворен телефон проверява дали има напомняния за насрочване;
 // транзакцията гарантира, че само един ще го насрочи
 let scheduling = false;
+let scheduleAgain = false;
 async function scheduleReminders() {
-  if (scheduling || !state.familyId) return;
+  if (!state.familyId) return;
+  if (scheduling) { scheduleAgain = true; return; } // ще проверим пак, щом свърши текущата
   scheduling = true;
   try {
     const now = Date.now();
-    const due = state.todos.filter((t) => !t.done && t.remindAt
+    const due = state.todos.filter((t) => !t.pending && !t.done && t.remindAt
       && t.remindScheduled !== t.remindAt
       && t.remindAt > now - 10 * 60_000
       && t.remindAt - now <= NTFY_MAX_AHEAD);
@@ -1371,10 +1393,22 @@ async function scheduleReminders() {
         tx.update(ref, { remindScheduled: d.remindAt, lastAction: 'system' });
         return { id: snap.id, ...d };
       }).catch((err) => { console.warn('Напомнянето не беше насрочено', err); return null; });
-      if (claimed) await sendReminder(claimed, remindRecipients(claimed)).catch((err) => console.warn(err));
+      if (!claimed) continue;
+      try {
+        const sent = await sendReminder(claimed, remindRecipients(claimed));
+        if (claimed.updatedBy === state.user.uid || claimed.createdBy === state.user.uid) {
+          if (sent) toast({ text: `⏰ Напомнянето е насрочено за ${remindLabel(claimed.remindAt)}`, sub: claimed.text });
+        }
+      } catch (err) {
+        console.warn(err);
+        // връщаме отметката, за да опитаме пак
+        updateDoc(doc(db, 'todos', claimed.id), { remindScheduled: null, lastAction: 'system' }).catch(() => {});
+        toast({ text: 'Напомнянето не беше насрочено', sub: 'Няма връзка с ntfy. Ще опитам пак след малко.', duration: 6000 });
+      }
     }
   } finally {
     scheduling = false;
+    if (scheduleAgain) { scheduleAgain = false; setTimeout(scheduleReminders, 1500); }
   }
 }
 
@@ -1626,6 +1660,8 @@ $('pushToggle').addEventListener('change', async (e) => {
   try {
     await setDoc(doc(db, 'users', state.user.uid), { ntfyTopic: topic, ntfyOn: on }, { merge: true });
     state.push = { topic, on };
+    if (on) state.pushTopics.set(state.user.uid, topic);
+    else state.pushTopics.delete(state.user.uid);
     updatePushUI();
     state.pushLoadedAt = 0; // другите ще го видят при следващото изпращане
     if (on) toast({ text: 'Известията са включени', sub: 'Изпълни стъпките отдолу на този телефон.', duration: 5000 });
