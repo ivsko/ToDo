@@ -783,13 +783,7 @@ function taskEl(t) {
     r.append(remindLabel(t.remindAt));
     meta.append(r);
   }
-  if (t.commentCount > 0) {
-    const c = document.createElement('span');
-    c.className = 'meta';
-    c.innerHTML = svg('chat');
-    c.append(String(t.commentCount));
-    meta.append(c);
-  }
+
   if (t.done && t.doneByEmail && t.doneByEmail !== state.user.email) {
     const w = document.createElement('span');
     w.className = 'meta';
@@ -798,7 +792,25 @@ function taskEl(t) {
   }
 
   body.append(text, meta);
-  body.onclick = () => openDetail(t);
+
+  // последният коментар — направо в картата
+  if (t.commentCount > 0 && t.lastComment) {
+    const c = document.createElement('p');
+    c.className = 'task-comment';
+    c.innerHTML = svg('chat');
+    const line = document.createElement('span');
+    const who = t.lastCommentByEmail ? `${nameOf(t.lastCommentByEmail, { me: 'Ти' })}: ` : '';
+    line.textContent = who + t.lastComment;
+    c.append(line);
+    if (t.commentCount > 1) {
+      const more = document.createElement('span');
+      more.className = 'task-comment-more';
+      more.textContent = `+${t.commentCount - 1}`;
+      c.append(more);
+    }
+    body.append(c);
+  }
+  body.onclick = (e) => openDetail(t, { toComments: Boolean(e.target.closest('.task-comment')) });
 
   // звезда
   const star = document.createElement('button');
@@ -1097,7 +1109,7 @@ const detail = $('detailDialog');
 let draft = null;   // временни промени, докато листът е отворен
 let editing = null;
 
-function openDetail(t) {
+function openDetail(t, { toComments = false } = {}) {
   editing = t;
   draft = {
     text: t.text,
@@ -1113,6 +1125,12 @@ function openDetail(t) {
   $('commentInput').value = '';
   renderDetail();
   openComments(t);
+  if (toComments) {
+    requestAnimationFrame(() => {
+      document.querySelector('#detailDialog .comments')?.scrollIntoView({ block: 'end' });
+      $('commentInput').focus();
+    });
+  }
   detail.returnValue = '';
   detail.showModal();
   autosize($('detailText'));
@@ -1499,6 +1517,8 @@ async function sendComment() {
     await updateDoc(doc(db, 'todos', t.id), {
       commentCount: increment(1),
       lastComment: text.slice(0, 140),
+      lastCommentByEmail: state.user.email,
+      lastCommentAt: Date.now(),
       ...changeMeta('comment'),
     });
     // известие до хората, свързани със задачата

@@ -503,6 +503,20 @@ input[role="switch"]:checked::after { transform: translateX(20px); }
 .meta-remind.past { color: var(--muted); font-weight: 400; }
 
 /* ---------- Коментари ---------- */
+.task-comment {
+  width: 100%;
+  display: flex; align-items: center; gap: 6px;
+  margin-top: 6px;
+  padding: 5px 10px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  font-size: .84rem; color: var(--ink);
+}
+.task-comment svg { width: 14px; height: 14px; flex: none; color: var(--muted); }
+.task-comment > span:first-of-type { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.task-comment-more { flex: none; color: var(--muted); font-size: .78rem; font-weight: 600; }
+.done .task-comment { opacity: .6; }
+
 .comment-list {
   display: grid; gap: 8px;
   max-height: 260px; overflow-y: auto;
