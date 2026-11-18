@@ -58,5 +58,22 @@ service cloud.firestore {
         allow delete: if signedIn() && resource.data.from == request.auth.uid;
       }
     }
+
+    // уроци на децата и плащания: виждат и променят само хората от семейството
+    function inFamily() { return signedIn() && resource.data.familyId == myFamily(); }
+    function toFamily() { return signedIn() && request.resource.data.familyId == myFamily(); }
+
+    match /kids/{id}     { allow read, delete: if inFamily(); allow update: if inFamily() && toFamily(); allow create: if toFamily(); }
+    match /lessons/{id}  { allow read, delete: if inFamily(); allow update: if inFamily() && toFamily(); allow create: if toFamily(); }
+    match /payments/{id} { allow read, delete: if inFamily(); allow update: if inFamily() && toFamily(); allow create: if toFamily(); }
+
+    // квитанциите са отделни, за да не се теглят със списъка; до ~900 KB текст
+    match /receipts/{id} {
+      allow read, delete: if inFamily();
+      allow create: if toFamily() && request.resource.data.data is string && request.resource.data.data.size() < 950000;
+      allow update: if inFamily() && toFamily()
+        && request.resource.data.data is string
+        && request.resource.data.data.size() < 950000;
+    }
   }
 }

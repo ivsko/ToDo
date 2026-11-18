@@ -1,4 +1,5 @@
 import { auth, db } from './firebase.js';
+import { createLessons, lessonsIcon } from './lessons.js?v=19';
 
 import {
   collection,
@@ -44,6 +45,7 @@ const ICONS = {
   bell: '<path d="M6 10a6 6 0 1 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6Z"/><path d="M10 20a2 2 0 0 0 4 0"/>',
   chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1.1-4.6A8 8 0 1 1 21 12z"/>',
   users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1-3.5 3.5-5.5 6.5-5.5s5.5 2 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M17.5 14.7c2 .6 3.4 2.4 4 5.3"/>',
+  book: lessonsIcon,
   repeat: '<path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/>',
 };
 const svg = (name) => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>`;
@@ -106,6 +108,13 @@ const state = {
   names: new Map(),          // имейл → име, което човекът си е избрал
   notify: store.get('notify', '0') === '1' && 'Notification' in window && Notification.permission === 'granted',
 };
+
+// Уроци на децата и плащания (отделен модул, отделни колекции във Firestore)
+const lessons = createLessons({
+  db, $, toast,
+  getUser: () => state.user,
+  onChange: () => { if (state.view === 'home') renderHome(); },
+});
 
 /* ================= Дати ================= */
 
@@ -500,12 +509,14 @@ function stopListening() {
   if (state.unsubscribe) state.unsubscribe();
   state.unsubscribe = null;
   state.todos = [];
+  lessons.stop();
 }
 
 // един слушател за цялото семейство — списъците се правят в браузъра
 function startListening() {
   stopListening();
   state.firstSnapshot = true;
+  lessons.start(state.familyId);
 
   const q = query(
     collection(db, 'todos'),
@@ -535,10 +546,11 @@ function route() {
   const mList = h.match(/^#\/list\/(\w+)/);
 
   state.list = mList && joined ? listByKey(mList[1]) : null;
-  state.view = state.list ? 'list' : 'home';
+  state.view = state.list ? 'list' : h.startsWith('#/lessons') && joined ? 'lessons' : 'home';
 
   $('homeView').hidden = state.view !== 'home';
   $('listView').hidden = state.view !== 'list';
+  $('lessonsView').hidden = state.view !== 'lessons';
 
   state.newAssignee = state.list?.key === 'mine' ? state.user?.uid ?? null : null;
   if (state.list) {
@@ -577,6 +589,7 @@ function render() {
   if (!state.familyId) return;
   if (state.view === 'list') renderList();
   else if (state.view === 'home') renderHome();
+  else if (state.view === 'lessons') lessons.render();
   renderComposerWho();
 }
 
@@ -612,6 +625,10 @@ function renderHome() {
 
   $('smartLists').replaceChildren(...SMART.map((s) =>
     listRow(s, open.filter(s.match).length, s.key === 'today' && overdue)));
+
+  const kidRow = listRow({ key: 'lessons', title: 'Уроци и плащания', icon: 'book', color: '#C2410C' }, lessons.unpaidCount(), lessons.unpaidCount() > 0);
+  kidRow.querySelector('button').onclick = () => go('#/lessons');
+  $('kidLists').replaceChildren(kidRow);
 
   $('catLists').replaceChildren(...CATEGORIES.map((c, i) =>
     listRow({ key: `c${i}`, title: c.label, icon: c.icon, color: c.color }, open.filter((t) => t.category === c.id).length)));

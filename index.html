@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=18" />
+  <link rel="stylesheet" href="styles.css?v=19" />
 </head>
 
 <body>
@@ -85,6 +85,8 @@
 
       <nav id="homeLists" class="home-lists" aria-label="Списъци" hidden>
         <ul id="smartLists" class="list-group"></ul>
+        <h3 class="group-title">Деца</h3>
+        <ul id="kidLists" class="list-group"></ul>
         <h3 class="group-title">Категории</h3>
         <ul id="catLists" class="list-group"></ul>
         <p class="developer-tag">Разработено от Иван Колев</p>
@@ -134,7 +136,124 @@
         </div>
       </form>
     </div>
+
+    <!-- УРОЦИ И ПЛАЩАНИЯ -->
+    <div id="lessonsView" class="view lessons-view" hidden>
+      <header class="list-head">
+        <button class="back-btn" type="button" data-back="">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+          <span>Списъци</span>
+        </button>
+        <h1 class="list-title lessons-title">Уроци и плащания</h1>
+        <p id="lessonsSub" class="list-sub"></p>
+      </header>
+
+      <div id="kidChips" class="chip-row wrap kid-chips" role="radiogroup" aria-label="Дете"></div>
+      <div id="lessonTabs" class="seg" role="tablist">
+        <button type="button" role="tab" data-tab="lessons">Уроци</button>
+        <button type="button" role="tab" data-tab="payments">Плащания</button>
+      </div>
+
+      <section id="lessonsPane">
+        <div class="pane-body"></div>
+        <button id="addLessonBtn" type="button" class="btn btn-primary fab-btn">+ Нов урок</button>
+      </section>
+
+      <section id="paymentsPane" hidden>
+        <div class="month-nav">
+          <button id="prevMonth" type="button" class="icon-btn" aria-label="Предишен месец"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+          <span id="monthLabel"></span>
+          <button id="nextMonth" type="button" class="icon-btn" aria-label="Следващ месец"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+        </div>
+        <div class="pane-body"></div>
+        <button id="addPaymentBtn" type="button" class="btn btn-primary fab-btn">+ Ново плащане</button>
+      </section>
+    </div>
   </section>
+
+  <!-- ДЕТЕ -->
+  <dialog id="kidDialog" class="sheet">
+    <form method="dialog" class="sheet-inner">
+      <p id="kidTitle" class="sheet-title">Ново дете</p>
+      <label class="field"><span>Име</span><input id="kidName" type="text" maxlength="30" placeholder="напр. Мария" autocomplete="off" /></label>
+      <div class="detail-group"><p class="detail-label">Цвят</p><div id="kidColors" class="chip-row wrap"></div></div>
+      <div class="sheet-actions">
+        <button id="deleteKidBtn" type="button" class="btn btn-soft danger" aria-label="Изтрий детето"></button>
+        <button id="saveKidBtn" type="button" class="btn btn-primary">Запази</button>
+      </div>
+      <button value="close" class="link-btn">Затвори</button>
+    </form>
+  </dialog>
+
+  <!-- УРОК -->
+  <dialog id="lessonDialog" class="sheet">
+    <form method="dialog" class="sheet-inner">
+      <p id="lessonSheetTitle" class="sheet-title">Урок</p>
+      <div class="detail-group"><p class="detail-label">Дете</p><div id="lessonKids" class="chip-row wrap" role="radiogroup" aria-label="Дете"></div></div>
+      <label class="field"><span>Урок или занимание</span><input id="lessonTitle" type="text" maxlength="60" placeholder="напр. Пиано, Английски, Плуване" /></label>
+      <div class="detail-group"><p class="detail-label">Дни</p><div id="lessonDays" class="chip-row wrap"></div></div>
+      <div class="field-row">
+        <label class="field"><span>Час</span><input id="lessonTime" type="time" /></label>
+        <label class="field"><span>Продължителност, мин</span><input id="lessonDuration" type="number" min="0" step="5" inputmode="numeric" /></label>
+      </div>
+      <div class="field-row">
+        <label class="field"><span>Цена, €</span><input id="lessonPrice" type="number" min="0" step="0.01" inputmode="decimal" /></label>
+        <label class="field"><span>Плаща се</span><select id="lessonPriceType"><option value="month">на месец</option><option value="lesson">на урок</option><option value="once">еднократно</option></select></label>
+      </div>
+      <label class="field"><span>Учител или треньор</span><input id="lessonTeacher" type="text" maxlength="60" /></label>
+      <div class="field-row">
+        <label class="field"><span>Телефон</span><input id="lessonContact" type="tel" maxlength="30" /></label>
+        <label class="field"><span>Място</span><input id="lessonPlace" type="text" maxlength="60" /></label>
+      </div>
+      <label class="field"><span>Бележки</span><textarea id="lessonNotes" rows="2" maxlength="500" placeholder="напр. да носи нотите, банкова сметка за превод"></textarea></label>
+
+      <div id="lessonPayBox" class="detail-group">
+        <div class="pay-head"><p class="detail-label">Плащания</p><span id="lessonPaySum" class="muted small"></span></div>
+        <div id="lessonPays"></div>
+        <button id="lessonAddPay" type="button" class="btn btn-soft">+ Добави плащане</button>
+      </div>
+
+      <div class="sheet-actions">
+        <button id="deleteLessonBtn" type="button" class="btn btn-soft danger" aria-label="Изтрий урока"></button>
+        <button id="saveLessonBtn" type="button" class="btn btn-primary">Запази</button>
+      </div>
+      <button value="close" class="link-btn">Затвори без промени</button>
+    </form>
+  </dialog>
+
+  <!-- ПЛАЩАНЕ -->
+  <dialog id="paymentDialog" class="sheet">
+    <form method="dialog" class="sheet-inner">
+      <p id="paySheetTitle" class="sheet-title">Плащане</p>
+      <label class="field"><span>Урок</span><select id="payLesson"></select></label>
+      <div class="field-row">
+        <label class="field"><span>Сума, €</span><input id="payAmount" type="number" min="0" step="0.01" inputmode="decimal" /></label>
+        <label class="field"><span>Дата</span><input id="payDate" type="date" /></label>
+      </div>
+      <label class="field" id="payPeriodField"><span>За месец</span><input id="payPeriod" type="month" /></label>
+      <label class="field"><span>Бележка</span><input id="payNote" type="text" maxlength="120" placeholder="напр. в брой, по банка" /></label>
+      <div class="detail-group">
+        <p class="detail-label">Квитанция</p>
+        <div id="receiptBox"></div>
+        <input id="receiptCamera" type="file" accept="image/*" capture="environment" hidden />
+        <input id="receiptFile" type="file" accept="image/*,application/pdf" hidden />
+      </div>
+      <div class="sheet-actions">
+        <button id="deletePaymentBtn" type="button" class="btn btn-soft danger" aria-label="Изтрий плащането"></button>
+        <button id="savePaymentBtn" type="button" class="btn btn-primary">Запази</button>
+      </div>
+      <button value="close" class="link-btn">Затвори без промени</button>
+    </form>
+  </dialog>
+
+  <!-- КВИТАНЦИЯ -->
+  <dialog id="receiptDialog" class="sheet">
+    <form method="dialog" class="sheet-inner">
+      <div id="receiptBody"></div>
+      <a id="receiptOpen" class="btn btn-soft" target="_blank" rel="noopener" hidden>Свали</a>
+      <button value="close" class="btn btn-primary">Затвори</button>
+    </form>
+  </dialog>
 
   <!-- ДЕТАЙЛИ НА ЗАДАЧА -->
   <dialog id="detailDialog" class="sheet">
@@ -273,6 +392,6 @@
 
   <div id="toasts" class="toasts" aria-live="polite"></div>
 
-  <script type="module" src="app.js?v=18"></script>
+  <script type="module" src="app.js?v=19"></script>
 </body>
 </html>
