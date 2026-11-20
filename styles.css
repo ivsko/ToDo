@@ -678,3 +678,34 @@ input[role="switch"]:checked::after { transform: translateX(20px); }
 .receipt-full { display: block; width: 100%; height: auto; border-radius: 10px; background: #fff; }
 .sheet-actions > [hidden] + .btn { grid-column: 1 / -1; }
 .kid-chips [data-kid="all"] { --c: var(--primary); }
+
+/* Урок: информация отделно от плащанията */
+.info-head { display: flex; gap: 12px; align-items: center; }
+.list-icon.big { width: 46px; height: 46px; border-radius: 13px; }
+.list-icon.big svg { width: 24px; height: 24px; }
+.list-icon.small { width: 28px; height: 28px; border-radius: 8px; }
+.list-icon.small svg { width: 16px; height: 16px; }
+.info-card { background: var(--surface-2); border-radius: 14px; padding: 12px 14px; display: grid; gap: 8px; }
+.info-row { display: flex; gap: 12px; align-items: center; }
+.info-row > svg { width: 18px; height: 18px; color: var(--muted); flex: none; }
+.info-row > span { display: grid; min-width: 0; overflow-wrap: anywhere; }
+.info-row a { color: var(--primary); font-weight: 500; text-decoration: none; }
+.info-notes { font-size: .9rem; white-space: pre-wrap; border-top: 1px solid var(--line); padding-top: 8px; }
+.sheet-actions.two { grid-template-columns: 1fr 1fr; }
+.sheet-actions.two .btn-soft { width: auto; }
+.form-section { font-weight: 700; font-size: .95rem; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
+.pay-list { list-style: none; }
+.pay-list li + li .pay-row { box-shadow: inset 0 1px 0 0 var(--line); }
+.info-card .pay-row { padding: 9px 0; }
+.pay-main { font-weight: 600; text-transform: none; }
+.rc { display: inline-flex; align-items: center; gap: 4px; font-size: .74rem; font-weight: 600; white-space: nowrap; }
+.rc svg { width: 14px; height: 14px; }
+.rc.ok { color: var(--ok); }
+.rc.none { color: var(--muted); font-weight: 500; }
+.pay-group { margin-bottom: 12px; }
+.pay-group-head { --c: var(--primary); display: flex; gap: 10px; align-items: center; padding: 11px 14px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--c) 7%, transparent); }
+.pay-group .pay-row { padding-left: 52px; }
+.pay-total { text-align: right; }
+.pay-lesson-card .pay-group-head { border: 0; border-radius: 12px; }
+.pay-more summary { cursor: pointer; color: var(--muted); font-size: .88rem; padding: 4px 0; }
+.pay-more[open] summary { margin-bottom: 10px; }

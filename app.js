@@ -1,5 +1,5 @@
 import { auth, db } from './firebase.js';
-import { createLessons, lessonsIcon } from './lessons.js?v=19';
+import { createLessons, lessonsIcon } from './lessons.js?v=20';
 
 import {
   collection,

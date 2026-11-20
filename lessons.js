@@ -13,6 +13,15 @@ const MAX_RECEIPT = 650 * 1024; // байта след смаляване; до�
 const KID_COLORS = ['#E07A1F', '#2D6BE4', '#14967F', '#D6455D', '#7457E8', '#C28A0E'];
 const DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
 const PRICE_TYPES = { month: 'на месец', lesson: 'на урок', once: 'еднократно' };
+const SUBJECTS = [
+  { id: 'music', label: 'Музика', icon: 'music' },
+  { id: 'lang', label: 'Език', icon: 'lang' },
+  { id: 'sport', label: 'Спорт', icon: 'sport' },
+  { id: 'school', label: 'Училищен предмет', icon: 'school' },
+  { id: 'art', label: 'Изкуство и танци', icon: 'art' },
+  { id: 'other', label: 'Друго', icon: 'book' },
+];
+const subjectOf = (id) => SUBJECTS.find((x) => x.id === id) || SUBJECTS[SUBJECTS.length - 1];
 
 const ICON = {
   book: '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5M19 19v2H6"/>',
@@ -23,6 +32,14 @@ const ICON = {
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   chevL: '<path d="M15 18l-6-6 6-6"/>',
   chevR: '<path d="M9 18l6-6-6-6"/>',
+  music: '<path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/>',
+  lang: '<path d="M4 5h9M8.5 3v2M6 5c1 4 4 7 7 8M11 5c-1 4-4 7-7 8"/><path d="M13 21l4-9 4 9M14.5 18h5"/>',
+  sport: '<circle cx="12" cy="12" r="9"/><path d="M3.5 9h17M3.5 15h17M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>',
+  school: '<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c3 2 9 2 12 0v-5"/>',
+  art: '<path d="M12 3a9 9 0 1 0 0 18c1.5 0 2-1 2-2 0-1.5-1-2-1-3s1-2 2.5-2H18a3 3 0 0 0 3-3c0-4.5-4-8-9-8z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10.5" cy="7" r="1"/><circle cx="15.5" cy="7.5" r="1"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>',
+  phone: '<path d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2"/>',
+  pin: '<path d="M12 21s7-6 7-12a7 7 0 0 0-14 0c0 6 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/>',
   trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
 };
 const svg = (n) => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICON[n]}</svg>`;
@@ -133,6 +150,11 @@ export function createLessons({ db, $, toast, getUser, onChange }) {
       (snap) => {
         st[key] = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         render();
+        // отвореният урок показва новите плащания веднага
+        if ($('lessonDialog').open && !st.lessonEditing && st.editLesson) {
+          st.editLesson = lessonOf(st.editLesson.id) || st.editLesson;
+          renderLessonSheet();
+        }
         onChange?.();
       },
       (err) => {
@@ -180,9 +202,9 @@ export function createLessons({ db, $, toast, getUser, onChange }) {
 
   function lessonRow(l) {
     const kid = kidOf(l.kidId);
-    const meta = [scheduleText(l), l.price ? `${money(l.price)} ${PRICE_TYPES[l.priceType] || ''}` : '', l.teacher].filter(Boolean).map(esc).join(' · ');
+    const meta = [l.teacher, scheduleText(l)].filter(Boolean).map(esc).join(' · ');
     return `<li><button type="button" class="lesson-row" data-lesson="${esc(l.id)}" style="--c:${esc(kid?.color || '#7C8396')}">
-      <span class="list-icon">${svg('book')}</span>
+      <span class="list-icon">${svg(subjectOf(l.subject).icon)}</span>
       <span class="lesson-body">
         <span class="lesson-title">${esc(l.title)}${st.kidFilter === 'all' && kid ? ` <span class="lesson-kid">${esc(kid.name)}</span>` : ''}</span>
         <span class="lesson-meta">${meta}</span>
@@ -192,18 +214,28 @@ export function createLessons({ db, $, toast, getUser, onChange }) {
     </button></li>`;
   }
 
+  /** Кратък ред за плащане: за кой месец, кога, сума и има ли квитанция. Урокът е в заглавието на групата. */
   function paymentRow(p) {
     const l = lessonOf(p.lessonId);
-    const kid = kidOf(p.kidId);
-    const thumb = p.receipt
-      ? (p.receipt.thumb ? `<img class="pay-thumb" src="${esc(p.receipt.thumb)}" alt="">` : `<span class="pay-thumb pdf">PDF</span>`)
-      : `<span class="pay-thumb none" title="Без квитанция">${svg('receipt')}</span>`;
-    const sub = [dayLabel(p.date), p.period && l?.priceType === 'month' ? `за ${monthShort(p.period)}` : '', kid?.name, p.note].filter(Boolean).map(esc).join(' · ');
+    const monthly = l?.priceType === 'month' && p.period;
+    const main = monthly ? `За ${monthShort(p.period)}` : `Платено ${dayLabel(p.date)}`;
+    const sub = [monthly ? `платено ${dayLabel(p.date)}` : '', p.note].filter(Boolean).map(esc).join(' · ');
+    const rc = p.receipt
+      ? `<span class="rc ok">${svg('receipt')}Квитанция</span>`
+      : `<span class="rc none">Без квитанция</span>`;
     return `<li><button type="button" class="pay-row" data-payment="${esc(p.id)}">
-      ${thumb}
-      <span class="lesson-body"><span class="lesson-title">${esc(l?.title || 'Изтрит урок')}</span><span class="lesson-meta">${sub}</span></span>
-      <span class="pay-amount">${money(p.amount)}</span>
+      <span class="lesson-body"><span class="pay-main">${esc(main)}</span>${sub ? `<span class="lesson-meta">${sub}</span>` : ''}</span>
+      ${rc}<span class="pay-amount">${money(p.amount)}</span>
     </button></li>`;
+  }
+
+  /** Заглавие на група плащания: предмет, дете и преподавател на един ред. */
+  function lessonHead(l, extra = '') {
+    const kid = kidOf(l?.kidId);
+    return `<div class="pay-group-head" style="--c:${esc(kid?.color || '#7C8396')}">
+      <span class="list-icon small">${svg(subjectOf(l?.subject).icon)}</span>
+      <span class="lesson-body"><span class="lesson-title">${esc(l?.title || 'Изтрит урок')} <span class="lesson-kid">${esc(kid?.name || '')}</span></span>
+      ${l?.teacher ? `<span class="lesson-meta">${esc(l.teacher)}</span>` : ''}</span>${extra}</div>`;
   }
 
   function render() {
@@ -265,8 +297,10 @@ export function createLessons({ db, $, toast, getUser, onChange }) {
       if (missing.length) {
         html += `<h2 class="section-title alert">Чакат плащане за ${esc(monthShort(ym))}</h2><ul class="list-group">${missing.map((l) => `<li><button type="button" class="lesson-row" data-pay-for="${esc(l.id)}" style="--c:${esc(kidOf(l.kidId)?.color || '#7C8396')}"><span class="list-icon">${svg('book')}</span><span class="lesson-body"><span class="lesson-title">${esc(l.title)} <span class="lesson-kid">${esc(kidOf(l.kidId)?.name || '')}</span></span><span class="lesson-meta">${l.price ? money(l.price) : ''}</span></span><span class="pay-cta">Плати</span></button></li>`).join('')}</ul>`;
       }
+      const byLesson = new Map();
+      for (const p of pays) (byLesson.get(p.lessonId) || byLesson.set(p.lessonId, []).get(p.lessonId)).push(p);
       html += pays.length
-        ? `<h2 class="section-title">Плащания</h2><ul class="list-group">${pays.map(paymentRow).join('')}</ul>`
+        ? `<h2 class="section-title">Плащания</h2>${[...byLesson].map(([lid, list]) => `<div class="list-group pay-group">${lessonHead(lessonOf(lid), `<span class="pay-amount muted">${money(list.reduce((s, p) => s + (+p.amount || 0), 0))}</span>`)}<ul class="pay-list">${list.map(paymentRow).join('')}</ul></div>`).join('')}`
         : `<div class="empty"><div class="empty-icon">${svg('receipt')}</div><strong>Няма плащания за ${esc(monthShort(ym))}</strong><span>Добави плащане и снимай квитанцията.</span></div>`;
       $('paymentsPane').querySelector('.pane-body').innerHTML = html;
       $('addPaymentBtn').disabled = !st.lessons.length;
@@ -321,40 +355,80 @@ export function createLessons({ db, $, toast, getUser, onChange }) {
 
   /* ---------- Урок ---------- */
 
-  function openLesson(l) {
+  function openLesson(l, edit = !l) {
     st.editLesson = l || null;
+    st.lessonEditing = edit;
     st.confirmDelete = null;
     const kidId = l?.kidId || (st.kidFilter !== 'all' ? st.kidFilter : kidsSorted()[0]?.id);
-    st.lessonDraft = { kidId, days: [...(l?.days || [])] };
+    st.lessonDraft = { kidId, days: [...(l?.days || [])], subject: l?.subject || 'other' };
     $('lessonTitle').value = l?.title || '';
     $('lessonTime').value = l?.time || '';
     $('lessonDuration').value = l?.duration || '';
     $('lessonTeacher').value = l?.teacher || '';
     $('lessonContact').value = l?.contact || '';
+    $('lessonEmail').value = l?.email || '';
     $('lessonPlace').value = l?.place || '';
     $('lessonPrice').value = l?.price ?? '';
     $('lessonPriceType').value = l?.priceType || 'month';
+    $('lessonIban').value = l?.iban || '';
     $('lessonNotes').value = l?.notes || '';
-    $('lessonSheetTitle').textContent = l ? 'Урок' : 'Нов урок';
-    $('deleteLessonBtn').hidden = !l;
     $('deleteLessonBtn').innerHTML = svg('trash');
     renderLessonSheet();
-    $('lessonDialog').showModal();
-    if (!l) setTimeout(() => $('lessonTitle').focus(), 50);
+    if (!$('lessonDialog').open) $('lessonDialog').showModal();
+    if (edit && !l) setTimeout(() => $('lessonTitle').focus(), 50);
+  }
+
+  function infoRow(icon, label, value, href) {
+    if (!value) return '';
+    const v = href ? `<a href="${esc(href)}">${esc(value)}</a>` : esc(value);
+    return `<div class="info-row">${svg(icon)}<span><span class="muted small">${label}</span><span>${v}</span></span></div>`;
   }
 
   function renderLessonSheet() {
     const d = st.lessonDraft;
-    $('lessonKids').innerHTML = kidsSorted().map((k) => kidChip(k, k.id === d.kidId)).join('');
-    $('lessonDays').innerHTML = DAYS.map((name, i) => `<button type="button" class="chip day-chip" role="checkbox" aria-checked="${d.days.includes(i + 1)}" data-day="${i + 1}" style="--c:var(--primary)">${name}</button>`).join('');
     const l = st.editLesson;
-    $('lessonPayBox').hidden = !l;
-    if (l) {
-      const pays = st.payments.filter((p) => p.lessonId === l.id).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 12);
-      const sum = st.payments.filter((p) => p.lessonId === l.id).reduce((s, p) => s + (+p.amount || 0), 0);
-      $('lessonPays').innerHTML = pays.length ? `<ul class="list-group flat">${pays.map(paymentRow).join('')}</ul>` : '<p class="muted small">Още няма плащания.</p>';
-      $('lessonPaySum').textContent = pays.length ? `Общо ${money(sum)}` : '';
-    }
+    const editing = st.lessonEditing;
+    $('lessonEdit').hidden = !editing;
+    $('lessonInfo').hidden = editing;
+    $('lessonSheetTitle').textContent = editing ? (l ? 'Промени урока' : 'Нов урок') : '';
+    $('lessonSheetTitle').hidden = !editing;
+    $('lessonEditActions').hidden = !editing;
+    $('lessonViewActions').hidden = editing;
+    $('deleteLessonBtn').hidden = !l;
+    $('lessonKids').innerHTML = kidsSorted().map((k) => kidChip(k, k.id === d.kidId)).join('');
+    $('lessonSubjects').innerHTML = SUBJECTS.map((x) => `<button type="button" class="chip" role="radio" aria-checked="${x.id === d.subject}" data-subject="${x.id}" style="--c:var(--primary)">${svg(x.icon)}${x.label}</button>`).join('');
+    $('lessonDays').innerHTML = DAYS.map((name, i) => `<button type="button" class="chip day-chip" role="checkbox" aria-checked="${d.days.includes(i + 1)}" data-day="${i + 1}" style="--c:var(--primary)">${name}</button>`).join('');
+    if (editing || !l) return;
+
+    const kid = kidOf(l.kidId);
+    const subj = subjectOf(l.subject);
+    const tel = l.contact ? `tel:${l.contact.replace(/[^+\d]/g, '')}` : '';
+    const sched = [scheduleText(l), l.duration ? `${l.duration} мин` : ''].filter(Boolean).join(', ');
+    $('lessonInfo').innerHTML = `
+      <div class="info-head" style="--c:${esc(kid?.color || '#7C8396')}">
+        <span class="list-icon big">${svg(subj.icon)}</span>
+        <div><p class="sheet-title">${esc(l.title)}</p><p class="muted">${esc(subj.label)} · ${esc(kid?.name || '')}</p></div>
+      </div>
+      <div class="info-card">
+        <p class="detail-label">Преподавател</p>
+        ${l.teacher || l.contact || l.email ? `${infoRow('user', 'Име', l.teacher)}${infoRow('phone', 'Телефон', l.contact, tel)}${infoRow('file', 'Имейл', l.email, l.email ? `mailto:${l.email}` : '')}` : '<p class="muted small">Няма въведен преподавател. Натисни „Промени“.</p>'}
+      </div>
+      <div class="info-card">
+        <p class="detail-label">Урок</p>
+        ${infoRow('clock', 'Кога', sched)}${infoRow('pin', 'Къде', l.place)}
+        ${infoRow('receipt', 'Цена', l.price ? `${money(l.price)} ${PRICE_TYPES[l.priceType] || ''}` : '')}
+        ${infoRow('file', 'Сметка за превод', l.iban)}
+        ${l.notes ? `<p class="info-notes">${esc(l.notes)}</p>` : ''}
+      </div>
+      <div class="info-card">
+        <div class="pay-head"><p class="detail-label">Плащания</p><span class="muted small">${statusHtml(l)}</span></div>
+        <div id="lessonPays"></div>
+      </div>`;
+    const pays = st.payments.filter((p) => p.lessonId === l.id).sort((a, b) => (b.period || '').localeCompare(a.period || '') || b.date.localeCompare(a.date));
+    const sum = pays.reduce((s, p) => s + (+p.amount || 0), 0);
+    $('lessonPays').innerHTML = pays.length
+      ? `<ul class="pay-list">${pays.slice(0, 24).map(paymentRow).join('')}</ul><p class="muted small pay-total">Общо платено ${money(sum)}</p>`
+      : '<p class="muted small">Още няма плащания.</p>';
   }
 
   async function saveLesson() {
@@ -363,18 +437,21 @@ export function createLessons({ db, $, toast, getUser, onChange }) {
     if (!title) return toast({ text: 'Въведи какъв е урокът', sub: 'напр. Пиано, Английски, Плуване' });
     if (!d.kidId) return toast({ text: 'Избери дете' });
     const data = {
-      kidId: d.kidId, title, days: d.days.slice().sort(),
+      kidId: d.kidId, subject: d.subject || 'other', title, days: d.days.slice().sort(),
       time: $('lessonTime').value, duration: Math.max(0, +$('lessonDuration').value || 0) || null,
       teacher: $('lessonTeacher').value.trim(), contact: $('lessonContact').value.trim(), place: $('lessonPlace').value.trim(),
       price: Math.max(0, +String($('lessonPrice').value).replace(',', '.') || 0), priceType: $('lessonPriceType').value,
+      email: $('lessonEmail').value.trim(), iban: $('lessonIban').value.trim(),
       notes: $('lessonNotes').value.trim(), active: true,
     };
-    $('lessonDialog').close();
+    const wasNew = !st.editLesson;
+    if (wasNew) $('lessonDialog').close();
+    else { st.editLesson = { ...st.editLesson, ...data }; st.lessonEditing = false; renderLessonSheet(); }
     try {
-      if (st.editLesson) {
+      if (!wasNew) {
         await updateDoc(doc(db, 'lessons', st.editLesson.id), data);
         // плащанията следват детето, ако урокът се премести на друго дете
-        if (data.kidId !== st.editLesson.kidId) {
+        if (data.kidId !== (st.lessons.find((x) => x.id === st.editLesson.id) || {}).kidId) {
           const b = writeBatch(db);
           st.payments.filter((p) => p.lessonId === st.editLesson.id).forEach((p) => b.update(doc(db, 'payments', p.id), { kidId: data.kidId }));
           await b.commit();
@@ -414,22 +491,31 @@ export function createLessons({ db, $, toast, getUser, onChange }) {
     const l = lessonOf(lid);
     $('payLesson').innerHTML = lessonsSorted().map((x) => `<option value="${esc(x.id)}">${esc(x.title)} · ${esc(kidOf(x.kidId)?.name || '')}</option>`).join('');
     $('payLesson').value = lid || '';
+    // Урокът е известен: показваме го като заглавие, без падащ списък.
+    st.payLessonFixed = Boolean(p || lessonId);
+    $('payLessonField').hidden = st.payLessonFixed;
+    $('payWhen').open = Boolean(p?.note);
     $('payAmount').value = p ? p.amount : l?.price || '';
     $('payDate').value = p?.date || isoDay(new Date());
     const ym = st.tab === 'payments' ? st.month : thisMonth();
     $('payPeriod').value = p?.period || (lessonId && l && !paidFor(l, ym) ? ym : ym);
     $('payNote').value = p?.note || '';
     $('paySheetTitle').textContent = p ? 'Плащане' : 'Ново плащане';
+    $('payDate2').value = $('payDate').value;
     $('deletePaymentBtn').hidden = !p;
     $('deletePaymentBtn').innerHTML = svg('trash');
     renderPaymentSheet();
+    st.backToLesson = $('lessonDialog').open;
     if ($('lessonDialog').open) $('lessonDialog').close();
     $('paymentDialog').showModal();
   }
 
   function renderPaymentSheet() {
     const l = lessonOf($('payLesson').value);
+    $('payLessonCard').innerHTML = st.payLessonFixed && l ? lessonHead(l) : '';
+    $('payLessonCard').hidden = !st.payLessonFixed;
     $('payPeriodField').hidden = l?.priceType !== 'month';
+    $('payDateMain').hidden = l?.priceType === 'month';
     const box = $('receiptBox');
     const existing = st.editPayment?.receipt && !st.removeReceipt ? st.editPayment.receipt : null;
     const r = st.receipt || existing;
@@ -466,7 +552,8 @@ export function createLessons({ db, $, toast, getUser, onChange }) {
     const amount = +String($('payAmount').value).replace(',', '.');
     if (!l) return toast({ text: 'Избери урок' });
     if (!(amount > 0)) return toast({ text: 'Въведи сума' });
-    const date = $('payDate').value || isoDay(new Date());
+    const monthlyL = l.priceType === 'month';
+    const date = (monthlyL ? $('payDate2').value : $('payDate').value) || isoDay(new Date());
     const data = {
       lessonId, kidId: l.kidId, amount: Math.round(amount * 100) / 100, date,
       period: l.priceType === 'month' ? ($('payPeriod').value || date.slice(0, 7)) : date.slice(0, 7),
@@ -488,6 +575,7 @@ export function createLessons({ db, $, toast, getUser, onChange }) {
       if (st.receipt) await setDoc(doc(db, 'receipts', id), { familyId: st.familyId, kind: st.receipt.kind, data: st.receipt.data });
       else if (st.removeReceipt) await deleteDoc(doc(db, 'receipts', id)).catch(() => {});
       $('paymentDialog').close();
+      if (st.backToLesson) openLesson(lessonOf(lessonId) || st.editLesson, false);
       toast({ text: `Плащането е записано${st.receipt ? ' с квитанция' : ''}`, sub: `${l.title} · ${money(data.amount)}` });
       st.receipt = null;
     } catch (err) {
@@ -584,6 +672,15 @@ export function createLessons({ db, $, toast, getUser, onChange }) {
       const b = e.target.closest('[data-kid]');
       if (b) { st.lessonDraft.kidId = b.dataset.kid; renderLessonSheet(); }
     });
+    $('lessonSubjects').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-subject]');
+      if (b) { st.lessonDraft.subject = b.dataset.subject; renderLessonSheet(); }
+    });
+    $('editLessonBtn').onclick = () => { st.lessonEditing = true; renderLessonSheet(); };
+    $('cancelLessonEdit').onclick = () => {
+      if (!st.editLesson) return $('lessonDialog').close();
+      openLesson(st.editLesson, false);
+    };
     $('lessonDays').addEventListener('click', (e) => {
       const b = e.target.closest('[data-day]');
       if (!b) return;
@@ -595,11 +692,13 @@ export function createLessons({ db, $, toast, getUser, onChange }) {
     $('saveLessonBtn').onclick = saveLesson;
     $('deleteLessonBtn').onclick = deleteLesson;
     $('lessonAddPay').onclick = () => openPayment(null, st.editLesson?.id);
-    $('lessonPays').addEventListener('click', (e) => {
+    $('lessonInfo').addEventListener('click', (e) => {
       const p = e.target.closest('[data-payment]');
       if (p) openPayment(st.payments.find((x) => x.id === p.dataset.payment));
     });
 
+    $('payDate2').addEventListener('change', () => ($('payDate').value = $('payDate2').value));
+    $('payDate').addEventListener('change', () => ($('payDate2').value = $('payDate').value));
     $('payLesson').addEventListener('change', () => {
       const l = lessonOf($('payLesson').value);
       if (l?.price && !st.editPayment) $('payAmount').value = l.price;

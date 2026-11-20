@@ -1,5 +1,5 @@
 // Service worker: офлайн старт на приложението и отваряне при клик на известие.
-const CACHE = 'zaedno-v19';
+const CACHE = 'zaedno-v20';
 const SHELL = [
   './',
   './index.html',
