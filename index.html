@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=19" />
+  <link rel="stylesheet" href="styles.css?v=20" />
 </head>
 
 <body>
@@ -188,36 +188,50 @@
   <!-- УРОК -->
   <dialog id="lessonDialog" class="sheet">
     <form method="dialog" class="sheet-inner">
+      <div id="lessonInfo"></div>
+      <div id="lessonViewActions" class="sheet-actions two">
+        <button id="editLessonBtn" type="button" class="btn btn-soft">Промени</button>
+        <button id="lessonAddPay" type="button" class="btn btn-primary">+ Плащане</button>
+      </div>
+
       <p id="lessonSheetTitle" class="sheet-title">Урок</p>
-      <div class="detail-group"><p class="detail-label">Дете</p><div id="lessonKids" class="chip-row wrap" role="radiogroup" aria-label="Дете"></div></div>
-      <label class="field"><span>Урок или занимание</span><input id="lessonTitle" type="text" maxlength="60" placeholder="напр. Пиано, Английски, Плуване" /></label>
-      <div class="detail-group"><p class="detail-label">Дни</p><div id="lessonDays" class="chip-row wrap"></div></div>
-      <div class="field-row">
-        <label class="field"><span>Час</span><input id="lessonTime" type="time" /></label>
-        <label class="field"><span>Продължителност, мин</span><input id="lessonDuration" type="number" min="0" step="5" inputmode="numeric" /></label>
-      </div>
-      <div class="field-row">
-        <label class="field"><span>Цена, €</span><input id="lessonPrice" type="number" min="0" step="0.01" inputmode="decimal" /></label>
-        <label class="field"><span>Плаща се</span><select id="lessonPriceType"><option value="month">на месец</option><option value="lesson">на урок</option><option value="once">еднократно</option></select></label>
-      </div>
-      <label class="field"><span>Учител или треньор</span><input id="lessonTeacher" type="text" maxlength="60" /></label>
-      <div class="field-row">
-        <label class="field"><span>Телефон</span><input id="lessonContact" type="tel" maxlength="30" /></label>
+      <div id="lessonEdit" class="stack">
+        <div class="detail-group"><p class="detail-label">Дете</p><div id="lessonKids" class="chip-row wrap" role="radiogroup" aria-label="Дете"></div></div>
+        <div class="detail-group"><p class="detail-label">Вид</p><div id="lessonSubjects" class="chip-row wrap" role="radiogroup" aria-label="Вид"></div></div>
+        <label class="field"><span>Предмет или занимание</span><input id="lessonTitle" type="text" maxlength="60" placeholder="напр. Пиано, Английски, Плуване" /></label>
+
+        <p class="form-section">Преподавател</p>
+        <label class="field"><span>Име</span><input id="lessonTeacher" type="text" maxlength="60" placeholder="напр. г-жа Иванова" /></label>
+        <div class="field-row">
+          <label class="field"><span>Телефон</span><input id="lessonContact" type="tel" maxlength="30" /></label>
+          <label class="field"><span>Имейл</span><input id="lessonEmail" type="email" maxlength="80" /></label>
+        </div>
+
+        <p class="form-section">Кога и къде</p>
+        <div class="detail-group"><p class="detail-label">Дни</p><div id="lessonDays" class="chip-row wrap"></div></div>
+        <div class="field-row">
+          <label class="field"><span>Час</span><input id="lessonTime" type="time" /></label>
+          <label class="field"><span>Продължителност, мин</span><input id="lessonDuration" type="number" min="0" step="5" inputmode="numeric" /></label>
+        </div>
         <label class="field"><span>Място</span><input id="lessonPlace" type="text" maxlength="60" /></label>
-      </div>
-      <label class="field"><span>Бележки</span><textarea id="lessonNotes" rows="2" maxlength="500" placeholder="напр. да носи нотите, банкова сметка за превод"></textarea></label>
 
-      <div id="lessonPayBox" class="detail-group">
-        <div class="pay-head"><p class="detail-label">Плащания</p><span id="lessonPaySum" class="muted small"></span></div>
-        <div id="lessonPays"></div>
-        <button id="lessonAddPay" type="button" class="btn btn-soft">+ Добави плащане</button>
+        <p class="form-section">Цена</p>
+        <div class="field-row">
+          <label class="field"><span>Цена, €</span><input id="lessonPrice" type="number" min="0" step="0.01" inputmode="decimal" /></label>
+          <label class="field"><span>Плаща се</span><select id="lessonPriceType"><option value="month">на месец</option><option value="lesson">на урок</option><option value="once">еднократно</option></select></label>
+        </div>
+        <label class="field"><span>Сметка за превод (по желание)</span><input id="lessonIban" type="text" maxlength="40" placeholder="IBAN" autocapitalize="characters" /></label>
+        <label class="field"><span>Бележки</span><textarea id="lessonNotes" rows="2" maxlength="500" placeholder="напр. да носи нотите"></textarea></label>
       </div>
 
-      <div class="sheet-actions">
-        <button id="deleteLessonBtn" type="button" class="btn btn-soft danger" aria-label="Изтрий урока"></button>
-        <button id="saveLessonBtn" type="button" class="btn btn-primary">Запази</button>
+      <div id="lessonEditActions" class="stack">
+        <div class="sheet-actions">
+          <button id="deleteLessonBtn" type="button" class="btn btn-soft danger" aria-label="Изтрий урока"></button>
+          <button id="saveLessonBtn" type="button" class="btn btn-primary">Запази</button>
+        </div>
+        <button id="cancelLessonEdit" type="button" class="link-btn">Откажи промените</button>
       </div>
-      <button value="close" class="link-btn">Затвори без промени</button>
+      <button value="close" class="link-btn">Затвори</button>
     </form>
   </dialog>
 
@@ -225,19 +239,26 @@
   <dialog id="paymentDialog" class="sheet">
     <form method="dialog" class="sheet-inner">
       <p id="paySheetTitle" class="sheet-title">Плащане</p>
-      <label class="field"><span>Урок</span><select id="payLesson"></select></label>
+      <div id="payLessonCard" class="pay-lesson-card"></div>
+      <label class="field" id="payLessonField"><span>За урок</span><select id="payLesson"></select></label>
       <div class="field-row">
         <label class="field"><span>Сума, €</span><input id="payAmount" type="number" min="0" step="0.01" inputmode="decimal" /></label>
-        <label class="field"><span>Дата</span><input id="payDate" type="date" /></label>
+        <label class="field" id="payPeriodField"><span>За месец</span><input id="payPeriod" type="month" /></label>
+        <label class="field" id="payDateMain"><span>Дата</span><input id="payDate" type="date" /></label>
       </div>
-      <label class="field" id="payPeriodField"><span>За месец</span><input id="payPeriod" type="month" /></label>
-      <label class="field"><span>Бележка</span><input id="payNote" type="text" maxlength="120" placeholder="напр. в брой, по банка" /></label>
       <div class="detail-group">
         <p class="detail-label">Квитанция</p>
         <div id="receiptBox"></div>
         <input id="receiptCamera" type="file" accept="image/*" capture="environment" hidden />
         <input id="receiptFile" type="file" accept="image/*,application/pdf" hidden />
       </div>
+      <details id="payWhen" class="pay-more">
+        <summary>Дата на плащане и бележка</summary>
+        <div class="stack">
+          <label class="field"><span>Платено на</span><input id="payDate2" type="date" /></label>
+          <label class="field"><span>Бележка</span><input id="payNote" type="text" maxlength="120" placeholder="напр. в брой, по банка" /></label>
+        </div>
+      </details>
       <div class="sheet-actions">
         <button id="deletePaymentBtn" type="button" class="btn btn-soft danger" aria-label="Изтрий плащането"></button>
         <button id="savePaymentBtn" type="button" class="btn btn-primary">Запази</button>
@@ -392,6 +413,6 @@
 
   <div id="toasts" class="toasts" aria-live="polite"></div>
 
-  <script type="module" src="app.js?v=19"></script>
+  <script type="module" src="app.js?v=20"></script>
 </body>
 </html>
